@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,12 +7,15 @@ import { ChatMessage } from "@/components/ChatMessage";
 import { HotelResults } from "@/components/HotelResults";
 import { ChatSidebar } from "@/components/ChatSidebar";
 import { useVoiceRecording } from "@/hooks/use-voice-recording";
+import { apiService, ChatRequest } from "@/services/api";
 
 interface Message {
   id: string;
   content: string;
   role: "user" | "assistant";
   timestamp: Date;
+  hotelData?: any[];
+  selectedHotel?: any;
 }
 
 const Chat = () => {
@@ -25,6 +27,9 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Generate a session ID if not provided
+  const currentSessionId = sessionId || `session_${Date.now()}`;
   
   const { 
     isRecording, 
@@ -52,25 +57,11 @@ const Chat = () => {
         timestamp: new Date(),
       };
       
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "I'd be happy to help you find the perfect stay! Let me search for the best options based on your request.",
-        role: "assistant",
-        timestamp: new Date(),
-      };
-
-      setMessages([userMessage, assistantMessage]);
+      setMessages([userMessage]);
+      setIsLoading(true);
       
-      // Add default hotel results after a short delay
-      setTimeout(() => {
-        const hotelResultsMessage: Message = {
-          id: (Date.now() + 2).toString(),
-          content: "Here are the top recommendations I found for you:",
-          role: "assistant",
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, hotelResultsMessage]);
-      }, 1500);
+      // Send the initial message to the backend
+      sendMessageToBackend(initialMessage);
     } else if (!sessionId) {
       // Default welcome message for new chats
       setMessages([
@@ -84,9 +75,42 @@ const Chat = () => {
     }
   }, [location.state, sessionId]);
 
+  const sendMessageToBackend = async (message: string) => {
+    try {
+      const request: ChatRequest = {
+        message,
+        session_id: currentSessionId,
+      };
+
+      const response = await apiService.chat(request);
+      
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: response.reply || "I'm sorry, I couldn't process your request right now.",
+        role: "assistant",
+        timestamp: new Date(),
+        hotelData: response.hotel_data || undefined,
+        selectedHotel: response.selected_hotel || undefined,
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error sending message to backend:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "I'm having trouble connecting to my services right now. Please try again later.",
+        role: "assistant",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -96,20 +120,12 @@ const Chat = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const messageToSend = inputValue;
     setInputValue("");
     setIsLoading(true);
 
-    // Simulate assistant response
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "Let me search for the best options for you based on your preferences...",
-        role: "assistant",
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsLoading(false);
-    }, 1500);
+    // Send message to backend
+    await sendMessageToBackend(messageToSend);
   };
 
   const handleVoiceRecording = async () => {
@@ -193,24 +209,23 @@ const Chat = () => {
           {messages.map((message, index) => (
             <div key={message.id}>
               <ChatMessage message={message} />
-              {/* Show hotel results after the second assistant message */}
-              {message.role === "assistant" && index === 2 && (
+              {/* Show hotel results if the message has hotel data */}
+              {message.role === "assistant" && message.hotelData && message.hotelData.length > 0 && (
                 <div className="mt-4 flex justify-start">
                   <div className="bg-white rounded-2xl p-4 max-w-full shadow-sm">
-                    <HotelResults />
+                    <HotelResults hotels={message.hotelData} />
                   </div>
                 </div>
               )}
             </div>
           ))}
-
+          
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-white rounded-2xl p-4 max-w-[85%] shadow-sm">
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  <span className="text-sm text-gray-600">Thinking...</span>
                 </div>
               </div>
             </div>
@@ -220,36 +235,28 @@ const Chat = () => {
         </div>
 
         {/* Input */}
-        <div className="border-t bg-white p-4">
+        <div className="bg-white border-t p-4">
           <form onSubmit={handleSendMessage} className="flex gap-2">
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Describe your ideal stay..."
-              className="flex-1 rounded-full"
-              disabled={isRecording}
+              placeholder="Tell me about your trip..."
+              disabled={isLoading}
+              className="flex-1"
             />
-            <Button 
+            <Button
               type="button"
+              variant="outline"
               size="icon"
-              className={`rounded-full ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-500 hover:bg-gray-600'}`}
               onClick={handleVoiceRecording}
               disabled={isLoading}
             >
               {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </Button>
-            <Button 
-              type="submit" 
-              size="icon"
-              className="rounded-full"
-              disabled={!inputValue.trim() || isLoading || isRecording}
-            >
+            <Button type="submit" disabled={isLoading || !inputValue.trim()}>
               <Send className="w-4 h-4" />
             </Button>
           </form>
-          {recordingError && (
-            <p className="text-red-500 text-sm mt-2">{recordingError}</p>
-          )}
         </div>
       </div>
     </div>

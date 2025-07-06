@@ -7,10 +7,25 @@ import pandas as pd
 class SnowflakeDB:
     def __init__(self):
         self.connection = None
-        self._connect()
+        # Don't connect automatically - only when needed
     
     def _connect(self):
         """Establish connection to Snowflake"""
+        if self.connection is not None:
+            return
+            
+        # Check if we have the required credentials
+        if not all([
+            settings.snowflake_account,
+            settings.snowflake_user,
+            settings.snowflake_password,
+            settings.snowflake_warehouse,
+            settings.snowflake_database,
+            settings.snowflake_schema
+        ]):
+            print("Snowflake credentials not configured. Skipping connection.")
+            return
+            
         try:
             self.connection = snowflake.connector.connect(
                 account=settings.snowflake_account,
@@ -21,12 +36,24 @@ class SnowflakeDB:
                 schema=settings.snowflake_schema,
                 role=settings.snowflake_role
             )
+            print("Successfully connected to Snowflake")
         except Exception as e:
             print(f"Failed to connect to Snowflake: {e}")
-            raise
+            # Don't raise the exception - just log it
+            self.connection = None
+    
+    def _ensure_connection(self):
+        """Ensure we have a connection before executing queries"""
+        if self.connection is None:
+            self._connect()
+        return self.connection is not None
     
     def execute_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Execute a query and return results as list of dictionaries"""
+        if not self._ensure_connection():
+            print("No Snowflake connection available")
+            return []
+            
         try:
             cursor = self.connection.cursor()
             if params:
@@ -44,13 +71,17 @@ class SnowflakeDB:
             return [dict(zip(columns, row)) for row in results]
         except Exception as e:
             print(f"Error executing query: {e}")
-            raise
+            return []
         finally:
             if cursor:
                 cursor.close()
     
     def execute_insert(self, query: str, params: Optional[Dict[str, Any]] = None) -> int:
         """Execute an INSERT query and return the number of affected rows"""
+        if not self._ensure_connection():
+            print("No Snowflake connection available")
+            return 0
+            
         try:
             cursor = self.connection.cursor()
             if params:
@@ -62,8 +93,9 @@ class SnowflakeDB:
             return cursor.rowcount
         except Exception as e:
             print(f"Error executing insert: {e}")
-            self.connection.rollback()
-            raise
+            if self.connection:
+                self.connection.rollback()
+            return 0
         finally:
             if cursor:
                 cursor.close()
@@ -78,6 +110,10 @@ class SnowflakeDB:
     
     def insert_dataframe(self, df: pd.DataFrame, table_name: str) -> bool:
         """Insert a pandas DataFrame into a Snowflake table"""
+        if not self._ensure_connection():
+            print("No Snowflake connection available")
+            return False
+            
         try:
             success, nchunks, nrows, _ = write_pandas(
                 self.connection, 
@@ -88,7 +124,7 @@ class SnowflakeDB:
             return success
         except Exception as e:
             print(f"Error inserting DataFrame: {e}")
-            raise
+            return False
     
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user by email"""
@@ -143,6 +179,7 @@ class SnowflakeDB:
         """Close the database connection"""
         if self.connection:
             self.connection.close()
+            self.connection = None
 
-# Global instance
+# Global instance - don't connect automatically
 snowflake_db = SnowflakeDB() 
