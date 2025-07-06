@@ -1,12 +1,13 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
+from app.core.settings import settings
 
 if TYPE_CHECKING:
     from app.models.trip_leg import TripLeg
 
 class Hotel(SQLModel, table=True):
-    __tablename__ = "HOTELS"
+    __tablename__ = settings.snowflake_hotels_table
     
     hotel_id: Optional[int] = Field(default=None, primary_key=True, alias="HOTEL_ID")
     hotel_name: str = Field(max_length=255, alias="HOTEL_NAME")

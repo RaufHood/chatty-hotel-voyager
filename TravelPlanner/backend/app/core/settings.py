@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     snowflake_schema: Optional[str] = "DBO"
     snowflake_role: Optional[str] = None
     
+    # Snowflake Table Names
+    snowflake_users_table: str = "USERS"
+    snowflake_hotels_table: str = "HOTELS"
+    snowflake_trips_table: str = "TRIPS"
+    snowflake_trip_legs_table: str = "TRIP_LEGS"
+    
     # OAuth2 Settings
     google_client_id: Optional[str] = None
     google_client_secret: Optional[str] = None

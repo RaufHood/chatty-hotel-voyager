@@ -2,13 +2,14 @@ from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
 from app.schemas.auth import OAuthProvider
+from app.core.settings import settings
 
 if TYPE_CHECKING:
     from app.models.trip import Trip
     from app.models.trip_leg import TripLeg
 
 class User(SQLModel, table=True):
-    __tablename__ = "USERS"
+    __tablename__ = settings.snowflake_users_table
     
     user_id: Optional[int] = Field(default=None, primary_key=True, alias="USER_ID")
     email: str = Field(max_length=30, alias="EMAIL")

@@ -24,6 +24,8 @@ httpx>=0.25.0
 
 # AI & ML
 langchain>=0.0.350
+langchain-community>=0.0.10
+langchain-groq>=0.0.1
 sentence-transformers>=2.2.0
 
 # Task Queue & Caching

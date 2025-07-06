@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, TYPE_CHECKING
 from datetime import datetime
+from app.core.settings import settings
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -8,7 +9,7 @@ if TYPE_CHECKING:
     from app.models.hotel import Hotel
 
 class TripLeg(SQLModel, table=True):
-    __tablename__ = "TRIP_LEGS"
+    __tablename__ = settings.snowflake_trip_legs_table
     
     trip_leg_id: Optional[int] = Field(default=None, primary_key=True, alias="TRIP_LEG_ID")
     trip_id: int = Field(foreign_key="TRIPS.TRIP_ID", alias="TRIP_ID")
