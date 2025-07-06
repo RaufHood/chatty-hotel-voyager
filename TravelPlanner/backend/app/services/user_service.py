@@ -1,6 +1,8 @@
 from typing import Optional, Dict, Any
 from app.services.database import get_database
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
+from app.services.jwt_service import JWTService
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,6 +35,41 @@ class UserService:
             logger.error(f"Error getting user by ID {user_id}: {e}")
             return None
     
+
+    def create_user_from_oauth(self, user_data: UserCreate) -> Optional[Dict[str, Any]]:
+        """Create a new user from OAuth data"""
+        try:
+            # Check if user already exists
+            existing_user = self.get_user_by_email(user_data.email)
+            if existing_user:
+                logger.info(f"User {user_data.email} already exists")
+                return existing_user
+            
+            # Create new user
+            user_id = self.db.create_user(
+                email=user_data.email,
+                name=user_data.name,
+                surname=user_data.surname,
+                auto_token=None  # Will be set after JWT creation
+            )
+            
+            if user_id:
+                # Get the created user data
+                user_data_dict = self.get_user_by_id(user_id)
+                if user_data_dict:
+                    # Generate JWT token for auto_token
+                    token_response = JWTService.create_token_from_data(user_data_dict)
+                    
+                    # Update user with auto_token
+                    self.db.update_user(user_id, auto_token=token_response.access_token)
+                
+                # Return the created user
+                return self.get_user_by_id(user_id)
+            
+            return None
+        except Exception as e:
+            logger.error(f"Error creating user from OAuth: {e}")
+            return None
 
     
     def update_user(self, user_id: int, user_update: UserUpdate) -> bool:

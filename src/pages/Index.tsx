@@ -2,13 +2,21 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, Star, Clock, Shield, Search, User, MapPin, Plane } from "lucide-react";
+import { MessageCircle, Star, Clock, Shield, Search, User, MapPin, Plane, Send, Mic, MicOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useVoiceRecording } from "@/hooks/use-voice-recording";
 
 const Index = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  
+  const { 
+    isRecording, 
+    startRecording, 
+    stopRecording, 
+    error: recordingError 
+  } = useVoiceRecording();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,6 +26,28 @@ const Index = () => {
       } else {
         navigate("/auth");
       }
+    }
+  };
+
+  const handleVoiceRecording = async () => {
+    if (isRecording) {
+      const audioBlob = await stopRecording();
+      if (audioBlob) {
+        // For now, simulate converting audio to text
+        // When voice recording is released, send the message
+        const voiceMessage = "[Voice message recorded - will be processed by speech-to-text]";
+        
+        if (user) {
+          navigate("/chat", { state: { initialMessage: voiceMessage } });
+        } else {
+          navigate("/auth");
+        }
+        
+        // TODO: Send audioBlob to speech-to-text API
+        console.log('Audio blob recorded on index page:', audioBlob);
+      }
+    } else {
+      await startRecording();
     }
   };
 
@@ -67,7 +97,7 @@ const Index = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate("/auth")}
+                  onClick={() => navigate("/auth?mode=signup")}
                 >
                   Sign Up
                 </Button>
@@ -92,27 +122,40 @@ const Index = () => {
             </p>
           </div>
           
-          {/* Perplexity-style search input */}
+          {/* Chat-style search input */}
           <form onSubmit={handleSearch} className="mb-8">
             <div className="relative max-w-2xl mx-auto">
               <div className="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-1">
-                <div className="flex items-center px-4 py-3">
-                  <Search className="w-5 h-5 text-gray-400 mr-3 flex-shrink-0" />
+                <div className="flex items-center px-4 py-3 gap-3">
+                  <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
                   <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="I need a hotel in Paris for next weekend..."
                     className="border-0 bg-transparent text-lg placeholder:text-gray-500 focus-visible:ring-0 flex-1"
+                    disabled={isRecording}
                   />
                   <Button 
-                    type="submit"
-                    className="ml-2 bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-xl"
-                    disabled={!searchQuery.trim()}
+                    type="button"
+                    size="icon"
+                    className={`rounded-full ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-500 hover:bg-gray-600'}`}
+                    onClick={handleVoiceRecording}
                   >
-                    Search
+                    {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  </Button>
+                  <Button 
+                    type="submit"
+                    size="icon"
+                    className="rounded-full bg-primary hover:bg-primary/90"
+                    disabled={!searchQuery.trim() || isRecording}
+                  >
+                    <Send className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
+              {recordingError && (
+                <p className="text-red-500 text-sm mt-2 text-center">{recordingError}</p>
+              )}
             </div>
           </form>
         </div>

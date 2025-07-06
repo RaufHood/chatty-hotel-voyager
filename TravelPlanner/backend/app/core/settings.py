@@ -29,7 +29,13 @@ class Settings(BaseSettings):
     # Frontend URL
     frontend_url: str = "http://localhost:8000"
     
-    # AI/LLM Settings
+    # Backend URL
+    backend_url: str = "http://localhost:8000"
+    
+    # JWT Settings
+    jwt_secret_key: str = "CHANGE_ME_JWT_SECRET"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 30
     groq_api_key: Optional[str] = os.getenv("GROQ_API_KEY")
     
 
