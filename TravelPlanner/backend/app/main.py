@@ -31,6 +31,8 @@ def create_app() -> FastAPI:
             close_database()
         except Exception as e:
             logging.error(f"Failed to close database: {e}")
+    
+    return app
 
 def configure_cors(app: FastAPI):
     app.add_middleware(
@@ -56,6 +58,8 @@ def configure_logging():
         level=logging.INFO,
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     )
-app = create_app
+
+# Create the app instance
+app = create_app()
 
 

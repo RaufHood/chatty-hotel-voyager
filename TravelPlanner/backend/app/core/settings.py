@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     enable_celery: bool = "y" == "y"
     database_url: str = "postgresql+psycopg://postgres:postgres@db:5432/TravelPlanner"
     
+    # Redis URL for Celery
+    redis_url: str = "redis://localhost:6379/0"
+    
     # Snowflake Database Settings
     snowflake_account: Optional[str] = os.getenv("SNOWFLAKE_ACCOUNT")
     snowflake_user: Optional[str] = os.getenv("SNOWFLAKE_USER")
@@ -41,5 +44,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        # Allow extra fields since some environment variables might not be defined in the model
+        extra = "ignore"
 
 settings = Settings()

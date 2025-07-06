@@ -1,7 +1,7 @@
 from langchain.agents import initialize_agent, AgentType
-from langchain import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
-from langchain.schema import BaseMessage
+from langchain_core.messages import BaseMessage
 from app.services.lc_tools import hotel_search_tool, hotel_select_tool
 from langchain_groq import ChatGroq
 from app.core.settings import settings

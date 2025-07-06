@@ -41,8 +41,8 @@ class ChatService:
             # Get or create session-specific agent
             agent = chat_memory.get_or_create_agent(session_id)
             
-            # Run the agent with the message
-            result = await agent.arun(message)
+            # Run the agent with the message - use sync version for now
+            result = agent.run(message)
             
             # Create AI message
             ai_msg = AIMessage(content=result)

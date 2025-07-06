@@ -1,11 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, MessageCircle, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface ChatSession {
@@ -26,29 +24,28 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onClose }) => 
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
+  // For now, we'll use mock data since the backend doesn't have chat session management yet
   useEffect(() => {
     if (user) {
-      fetchChatSessions();
+      // Mock chat sessions - in the future, this will come from the backend API
+      setChatSessions([
+        {
+          id: 'session_1',
+          title: 'Paris Trip Planning',
+          last_message: 'I want to find a hotel in Paris for next weekend',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 'session_2', 
+          title: 'Berlin Accommodation',
+          last_message: 'Looking for budget-friendly options in Berlin',
+          created_at: new Date(Date.now() - 86400000).toISOString()
+        }
+      ]);
     }
   }, [user]);
-
-  const fetchChatSessions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('chat_sessions')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
-      if (error) throw error;
-      setChatSessions(data || []);
-    } catch (error) {
-      console.error('Error fetching chat sessions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleNewChat = () => {
     navigate('/chat');
