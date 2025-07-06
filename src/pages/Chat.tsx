@@ -1,23 +1,22 @@
 
-import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { Send, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { ChatMessage } from "@/components/ChatMessage";
 import { HotelRecommendations } from "@/components/HotelRecommendations";
 
 interface Message {
   id: string;
   content: string;
-  isUser: boolean;
+  role: "user" | "assistant";
   timestamp: Date;
 }
 
 const Chat = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -26,7 +25,7 @@ const Chat = () => {
       timestamp: new Date(),
     }
   ]);
-  const [input, setInput] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -116,7 +115,7 @@ const Chat = () => {
         )}
         
         {messages.map((message) => (
-          <ChatMessage key={message.id} message={{ ...message, role: message.isUser ? "user" : "assistant" }} />
+          <ChatMessage key={message.id} message={message} />
         ))}
 
         {messages.length >= 4 && (
