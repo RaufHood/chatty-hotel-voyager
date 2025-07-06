@@ -11,12 +11,6 @@ class SnowflakeDB:
     
     def _connect(self):
         """Establish connection to Snowflake"""
-        # Check if required Snowflake credentials are provided
-        if not all([settings.snowflake_account, settings.snowflake_user, settings.snowflake_password]):
-            print("Snowflake credentials not provided. Skipping Snowflake connection.")
-            self.connection = None
-            return
-        
         try:
             self.connection = snowflake.connector.connect(
                 account=settings.snowflake_account,
@@ -29,14 +23,10 @@ class SnowflakeDB:
             )
         except Exception as e:
             print(f"Failed to connect to Snowflake: {e}")
-            self.connection = None
+            raise
     
     def execute_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Execute a query and return results as list of dictionaries"""
-        if not self.connection:
-            print("Snowflake connection not available")
-            return []
-        
         try:
             cursor = self.connection.cursor()
             if params:
@@ -54,7 +44,7 @@ class SnowflakeDB:
             return [dict(zip(columns, row)) for row in results]
         except Exception as e:
             print(f"Error executing query: {e}")
-            return []
+            raise
         finally:
             if cursor:
                 cursor.close()

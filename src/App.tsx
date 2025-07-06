@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import BottomNavigation from "./components/BottomNavigation";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Chat from "./pages/Chat";
@@ -14,6 +15,8 @@ import Hotel from "./pages/Hotel";
 import Flight from "./pages/Flight";
 import Pay from "./pages/Pay";
 import Trips from "./pages/Trips";
+import Preferences from "./pages/Preferences";
+import Recommendations from "./pages/Recommendations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,8 +49,19 @@ const App = () => (
                 <Trips />
               </ProtectedRoute>
             } />
+            <Route path="/preferences" element={
+              <ProtectedRoute>
+                <Preferences />
+              </ProtectedRoute>
+            } />
+            <Route path="/recommendations" element={
+              <ProtectedRoute>
+                <Recommendations />
+              </ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <BottomNavigation />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

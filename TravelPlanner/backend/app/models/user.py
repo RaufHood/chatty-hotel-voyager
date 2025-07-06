@@ -1,7 +1,6 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
-from app.schemas.auth import OAuthProvider
 from app.core.settings import settings
 
 if TYPE_CHECKING:
@@ -15,11 +14,6 @@ class User(SQLModel, table=True):
     email: str = Field(max_length=30, alias="EMAIL")
     name: str = Field(max_length=30, alias="NAME")
     surname: str = Field(max_length=30, alias="SURNAME")
-    auto_token: Optional[str] = Field(default=None, max_length=255, alias="AUTO_TOKEN")
-    
-    # Additional fields for OAuth integration (not in Snowflake schema but needed for app)
-    oauth_provider: Optional[OAuthProvider] = None
-    oauth_id: Optional[str] = None
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

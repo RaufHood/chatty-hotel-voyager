@@ -1,5 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import Optional
+from fastapi import APIRouter, HTTPException
 from app.schemas.chat import (
     ChatRequest, 
     ChatResponse, 
@@ -19,10 +18,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 @router.post("/", response_model=ChatResponse)
-async def chat(
-    request: ChatRequest,
-    current_user: Optional[User] = Depends(get_current_user)
-):
+async def chat(request: ChatRequest):
     """
     Send a message to the AI travel agent.
     
@@ -33,13 +29,9 @@ async def chat(
     - Answer questions about travel planning
     """
     try:
-        # Use user ID if authenticated, otherwise use session ID
-        user_id = str(current_user.id) if current_user else None
-        
         response = await chat_service.process_message(
             message=request.message,
-            session_id=request.session_id,
-            user_id=user_id
+            session_id=request.session_id
         )
         
         return response
@@ -49,10 +41,7 @@ async def chat(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/history/{session_id}", response_model=ChatHistoryResponse)
-async def get_chat_history(
-    session_id: str,
-    current_user: Optional[User] = Depends(get_current_user)
-):
+async def get_chat_history(session_id: str):
     """
     Get chat history for a specific session.
     """
@@ -67,10 +56,7 @@ async def get_chat_history(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.delete("/history/{session_id}")
-async def clear_chat_history(
-    session_id: str,
-    current_user: Optional[User] = Depends(get_current_user)
-):
+async def clear_chat_history(session_id: str):
     """
     Clear chat history for a specific session.
     """

@@ -3,20 +3,34 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from app.core.settings import settings
-from app.api.routers import chat, trip, auth, hotel, pay
-from app.services.database import create_db_and_tables
-from app.services.oauth_service import oauth_service
+from app.api.routers import chat, trip, hotel, pay
+from app.services.database import create_db_and_tables, close_database
 
 def create_app() -> FastAPI:
     app = FastAPI(title="TravelPlanner")
 
     configure_cors(app)
-    configure_oauth(app)
     configure_router(app)
     configure_logging()
     
-    # Create database tables on startup
-    create_db_and_tables()
+    # Database startup event
+    @app.on_event("startup")
+    async def startup_event():
+        """Initialize database on startup"""
+        try:
+            create_db_and_tables()
+        except Exception as e:
+            logging.error(f"Failed to initialize database: {e}")
+            # Continue running the app even if database fails
+    
+    # Database shutdown event
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        """Close database connection on shutdown"""
+        try:
+            close_database()
+        except Exception as e:
+            logging.error(f"Failed to close database: {e}")
 
 def configure_cors(app: FastAPI):
     app.add_middleware(
@@ -27,12 +41,7 @@ def configure_cors(app: FastAPI):
         allow_headers=["*"],
     )
 
-def configure_oauth(app: FastAPI):
-    """Configure OAuth middleware"""
-    app.add_middleware(oauth_service.oauth)
-
 def configure_router(app: FastAPI):
-    app.include_router(auth.router, prefix="/api", tags=["auth"])
     app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
     app.include_router(trip.router, prefix="/api/trips", tags=["trips"])
     app.include_router(hotel.router, prefix="/api", tags=["hotels"])
