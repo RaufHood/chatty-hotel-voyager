@@ -41,9 +41,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 30
     
-    # AI/LLM Settings
+    # API Keys
     groq_api_key: Optional[str] = None
-    openai_api_key: Optional[str] = None
+    hotel_booking_key: Optional[str] = None
 
     class Config:
         env_file = ".env"

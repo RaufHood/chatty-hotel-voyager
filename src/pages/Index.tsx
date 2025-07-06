@@ -2,122 +2,92 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { MessageCircle, Star, Clock, Shield, Search, User, MapPin, Plane } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isSignupOpen, setIsSignupOpen] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate("/chat", { state: { initialMessage: searchQuery } });
+      if (user) {
+        navigate("/chat", { state: { initialMessage: searchQuery } });
+      } else {
+        navigate("/auth");
+      }
     }
-  };
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement login logic with backend
-    console.log("Login submitted");
-    setIsLoginOpen(false);
-  };
-
-  const handleSignup = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement signup logic with backend
-    console.log("Signup submitted");
-    setIsSignupOpen(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50">
-      {/* Header with Auth */}
+      {/* Header with Logo and Auth */}
       <div className="container mx-auto px-4 pt-6">
-        <div className="flex justify-end gap-2">
-          <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <User className="w-4 h-4 mr-2" />
-                Login
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Login to TravelChat</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input id="login-email" type="email" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input id="login-password" type="password" required />
-                </div>
-                <Button type="submit" className="w-full">
+        <div className="flex justify-between items-center">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+              <span className="text-white font-bold text-lg">T</span>
+            </div>
+            <h1 className="text-2xl font-bold text-primary">Travelry</h1>
+          </div>
+
+          {/* Auth Buttons */}
+          <div className="flex gap-2">
+            {user ? (
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/trips")}
+                >
+                  My Trips
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/chat")}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Chat
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/auth")}
+                >
+                  <User className="w-4 h-4 mr-2" />
                   Login
                 </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isSignupOpen} onOpenChange={setIsSignupOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                Sign Up
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Join TravelChat</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSignup} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-firstname">First Name</Label>
-                    <Input id="signup-firstname" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-lastname">Last Name</Label>
-                    <Input id="signup-lastname" required />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input id="signup-email" type="email" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input id="signup-password" type="password" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password-confirm">Confirm Password</Label>
-                  <Input id="signup-password-confirm" type="password" required />
-                </div>
-                <Button type="submit" className="w-full">
-                  Create Account
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/auth")}
+                >
+                  Sign Up
                 </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Hero Section */}
-      <div className="container mx-auto px-4 pt-16 pb-8">
-        <div className="text-center max-w-3xl mx-auto">
-          <div className="mb-12">
+      <div className="container mx-auto px-4 pt-12 pb-8">
+        <div className="text-center max-w-2xl mx-auto">
+          <div className="mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-6">
               <MessageCircle className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
               Hotel booking in seconds
             </h1>
-            <p className="text-xl text-gray-600 mb-12">
+            <p className="text-xl text-gray-600 mb-8">
               Skip the endless scrolling. Just tell us what you need and we'll find the best hotels at transparent prices.
             </p>
           </div>
@@ -181,7 +151,14 @@ const Index = () => {
                 <Button 
                   variant="secondary" 
                   size="sm"
-                  onClick={() => navigate("/chat", { state: { initialMessage: "I want to find hotels in Barcelona" } })}
+                  onClick={() => {
+                    const message = "I want to find hotels in Barcelona";
+                    if (user) {
+                      navigate("/chat", { state: { initialMessage: message } });
+                    } else {
+                      navigate("/auth");
+                    }
+                  }}
                   className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border-white/30"
                 >
                   <Plane className="w-4 h-4 mr-2" />
@@ -212,7 +189,14 @@ const Index = () => {
                 <Button 
                   variant="secondary" 
                   size="sm"
-                  onClick={() => navigate("/chat", { state: { initialMessage: "I want to find hotels in London" } })}
+                  onClick={() => {
+                    const message = "I want to find hotels in London";
+                    if (user) {
+                      navigate("/chat", { state: { initialMessage: message } });
+                    } else {
+                      navigate("/auth");
+                    }
+                  }}
                   className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border-white/30"
                 >
                   <Plane className="w-4 h-4 mr-2" />
@@ -243,7 +227,14 @@ const Index = () => {
                 <Button 
                   variant="secondary" 
                   size="sm"
-                  onClick={() => navigate("/chat", { state: { initialMessage: "I want to find hotels in Singapore" } })}
+                  onClick={() => {
+                    const message = "I want to find hotels in Singapore";
+                    if (user) {
+                      navigate("/chat", { state: { initialMessage: message } });
+                    } else {
+                      navigate("/auth");
+                    }
+                  }}
                   className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border-white/30"
                 >
                   <Plane className="w-4 h-4 mr-2" />
@@ -258,7 +249,7 @@ const Index = () => {
         <div className="text-center mt-12">
           <p className="text-gray-600 mb-4">Ready to explore more destinations?</p>
           <Button 
-            onClick={() => navigate("/chat")}
+            onClick={() => user ? navigate("/chat") : navigate("/auth")}
             className="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-xl text-lg"
           >
             <Search className="w-5 h-5 mr-2" />
