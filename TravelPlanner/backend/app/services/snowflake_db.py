@@ -11,12 +11,6 @@ class SnowflakeDB:
     
     def _connect(self):
         """Establish connection to Snowflake"""
-        # Check if required Snowflake credentials are provided
-        if not all([settings.snowflake_account, settings.snowflake_user, settings.snowflake_password]):
-            print("Snowflake credentials not provided. Skipping Snowflake connection.")
-            self.connection = None
-            return
-        
         try:
             self.connection = snowflake.connector.connect(
                 account=settings.snowflake_account,
@@ -29,14 +23,10 @@ class SnowflakeDB:
             )
         except Exception as e:
             print(f"Failed to connect to Snowflake: {e}")
-            self.connection = None
+            raise
     
     def execute_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Execute a query and return results as list of dictionaries"""
-        if not self.connection:
-            print("Snowflake connection not available")
-            return []
-        
         try:
             cursor = self.connection.cursor()
             if params:
@@ -54,7 +44,7 @@ class SnowflakeDB:
             return [dict(zip(columns, row)) for row in results]
         except Exception as e:
             print(f"Error executing query: {e}")
-            return []
+            raise
         finally:
             if cursor:
                 cursor.close()
@@ -102,20 +92,20 @@ class SnowflakeDB:
     
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user by email"""
-        query = "SELECT * FROM USERS WHERE EMAIL = %s"
+        query = f"SELECT * FROM {settings.snowflake_users_table} WHERE EMAIL = %s"
         results = self.execute_query(query, {"email": email})
         return results[0] if results else None
     
     def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
         """Get user by ID"""
-        query = "SELECT * FROM USERS WHERE USER_ID = %s"
+        query = f"SELECT * FROM {settings.snowflake_users_table} WHERE USER_ID = %s"
         results = self.execute_query(query, {"user_id": user_id})
         return results[0] if results else None
     
     def create_user(self, email: str, name: str, surname: str, auto_token: Optional[str] = None) -> int:
         """Create a new user and return the user_id"""
-        query = """
-        INSERT INTO USERS (EMAIL, NAME, SURNAME, AUTO_TOKEN)
+        query = f"""
+        INSERT INTO {settings.snowflake_users_table} (EMAIL, NAME, SURNAME, AUTO_TOKEN)
         VALUES (%s, %s, %s, %s)
         """
         self.execute_insert(query, {
@@ -145,7 +135,7 @@ class SnowflakeDB:
         if not set_clauses:
             return False
         
-        query = f"UPDATE USERS SET {', '.join(set_clauses)} WHERE USER_ID = %s"
+        query = f"UPDATE {settings.snowflake_users_table} SET {', '.join(set_clauses)} WHERE USER_ID = %s"
         affected_rows = self.execute_update(query, params)
         return affected_rows > 0
     

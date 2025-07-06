@@ -112,6 +112,24 @@ CREATE TABLE CHATTY_HOTEL_VOYAGER.DBO.TRIP_LEGS (
 
 ## Configuration
 
+### Configurable Table Names
+
+The application supports configurable table names through environment variables. This allows you to use different table names in different environments (development, staging, production) or if your Snowflake schema uses different naming conventions.
+
+**Default table names:**
+- Users: `USERS`
+- Hotels: `HOTELS`
+- Trips: `TRIPS`
+- Trip Legs: `TRIP_LEGS`
+
+**To customize table names**, add the following to your `.env` file:
+```env
+SNOWFLAKE_USERS_TABLE=MY_USERS_TABLE
+SNOWFLAKE_HOTELS_TABLE=MY_HOTELS_TABLE
+SNOWFLAKE_TRIPS_TABLE=MY_TRIPS_TABLE
+SNOWFLAKE_TRIP_LEGS_TABLE=MY_TRIP_LEGS_TABLE
+```
+
 ### Environment Variables
 Add the following to your `.env` file:
 
@@ -124,6 +142,12 @@ SNOWFLAKE_WAREHOUSE=your_warehouse
 SNOWFLAKE_DATABASE=CHATTY_HOTEL_VOYAGER
 SNOWFLAKE_SCHEMA=DBO
 SNOWFLAKE_ROLE=your_role
+
+# Snowflake Table Names (Optional - defaults shown)
+SNOWFLAKE_USERS_TABLE=USERS
+SNOWFLAKE_HOTELS_TABLE=HOTELS
+SNOWFLAKE_TRIPS_TABLE=TRIPS
+SNOWFLAKE_TRIP_LEGS_TABLE=TRIP_LEGS
 ```
 
 ## API Schemas
