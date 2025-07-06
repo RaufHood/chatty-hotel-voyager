@@ -4,8 +4,8 @@ import uuid
 from elevenlabs import ElevenLabs
 from tempfile import NamedTemporaryFile
 
-GROQ_API_KEY = os.environ('GROQ_API_KEY')
-ELEVENLABS_API_KEY = os.environ('ELEVENLABS_API_KEY')
+GROQ_API_KEY = os.environ['GROQ_API_KEY']
+ELEVENLABS_API_KEY = os.environ['ELEVENLABS_API_KEY']
 
 PATH = "/home/aleksei/" #replace with actual path once we deploy backend on a VM
 
