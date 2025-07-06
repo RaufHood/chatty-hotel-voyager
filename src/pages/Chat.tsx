@@ -11,7 +11,6 @@ interface Message {
   id: string;
   content: string;
   role: "user" | "assistant";
-  role: "user" | "assistant";
   timestamp: Date;
 }
 
@@ -41,7 +40,6 @@ const Chat = () => {
         id: Date.now().toString(),
         content: initialMessage,
         role: "user",
-        role: "user",
         timestamp: new Date(),
       };
       setMessages([userMessage]);
@@ -51,7 +49,6 @@ const Chat = () => {
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           content: "I'd be happy to help you find the perfect stay! Let me ask a few quick questions to narrow down the best options for you. What dates are you looking at, and do you have a preferred budget range?",
-          role: "assistant",
           role: "assistant",
           timestamp: new Date(),
         };
@@ -68,7 +65,6 @@ const Chat = () => {
       id: Date.now().toString(),
       content: inputValue,
       role: "user",
-      role: "user",
       timestamp: new Date(),
     };
 
@@ -81,7 +77,6 @@ const Chat = () => {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: "Let me search for the best hotels for you based on your preferences...",
-        role: "assistant",
         role: "assistant",
         timestamp: new Date(),
       };
@@ -124,8 +119,10 @@ const Chat = () => {
         ))}
 
         {messages.length >= 4 && (
-          <HotelRecommendations hotels={[]} />
-          <HotelRecommendations hotels={[]} />
+          <>
+            <HotelRecommendations hotels={[]} />
+            <HotelRecommendations hotels={[]} />
+          </>
         )}
 
         {isLoading && (
