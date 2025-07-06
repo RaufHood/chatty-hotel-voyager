@@ -1,11 +1,12 @@
 
 import { useState, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, ArrowLeft } from "lucide-react";
+import { Send, ArrowLeft, Menu } from "lucide-react";
 import { ChatMessage } from "@/components/ChatMessage";
-import { HotelRecommendations } from "@/components/HotelRecommendations";
+import { HotelResults } from "@/components/HotelResults";
+import { ChatSidebar } from "@/components/ChatSidebar";
 
 interface Message {
   id: string;
@@ -17,16 +18,11 @@ interface Message {
 const Chat = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content: "Hi! I'm your travel assistant. Tell me about your ideal trip - where would you like to go and when?",
-      role: "assistant",
-      timestamp: new Date(),
-    }
-  ]);
+  const { sessionId } = useParams();
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -34,28 +30,51 @@ const Chat = () => {
   };
 
   useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
     const initialMessage = location.state?.initialMessage;
-    if (initialMessage) {
+    if (initialMessage && !sessionId) {
+      // New chat with initial message
       const userMessage: Message = {
         id: Date.now().toString(),
         content: initialMessage,
         role: "user",
         timestamp: new Date(),
       };
-      setMessages([userMessage]);
       
-      // Simulate assistant response
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "I'd be happy to help you find the perfect stay! Let me search for the best options based on your request.",
+        role: "assistant",
+        timestamp: new Date(),
+      };
+
+      setMessages([userMessage, assistantMessage]);
+      
+      // Add default hotel results after a short delay
       setTimeout(() => {
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: "I'd be happy to help you find the perfect stay! Let me ask a few quick questions to narrow down the best options for you. What dates are you looking at, and do you have a preferred budget range?",
+        const hotelResultsMessage: Message = {
+          id: (Date.now() + 2).toString(),
+          content: "Here are the top recommendations I found for you:",
           role: "assistant",
           timestamp: new Date(),
         };
-        setMessages(prev => [...prev, assistantMessage]);
-      }, 1000);
+        setMessages(prev => [...prev, hotelResultsMessage]);
+      }, 1500);
+    } else if (!sessionId) {
+      // Default welcome message for new chats
+      setMessages([
+        {
+          id: "1",
+          content: "Hi! I'm your travel assistant. Tell me about your ideal trip - where would you like to go and when?",
+          role: "assistant",
+          timestamp: new Date(),
+        }
+      ]);
     }
-  }, [location.state]);
+  }, [location.state, sessionId]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +95,7 @@ const Chat = () => {
     setTimeout(() => {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "Let me search for the best hotels for you based on your preferences...",
+        content: "Let me search for the best options for you based on your preferences...",
         role: "assistant",
         timestamp: new Date(),
       };
@@ -86,75 +105,95 @@ const Chat = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <div className="bg-white border-b px-4 py-3 flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/")}
-          className="p-2"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">T</span>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar */}
+      <ChatSidebar isOpen={showSidebar} onClose={() => setShowSidebar(false)} />
+      
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="bg-white border-b px-4 py-3 flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowSidebar(true)}
+            className="lg:hidden"
+          >
+            <Menu className="w-5 h-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/")}
+            className="p-2"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">T</span>
+            </div>
+            <h1 className="font-semibold text-lg text-primary">Travelry</h1>
           </div>
-          <h1 className="font-semibold text-lg text-primary">Travelry</h1>
         </div>
-      </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 && (
-          <div className="text-center text-gray-500 mt-12">
-            <div className="text-4xl mb-4">✈️</div>
-            <p>Tell me about your dream trip and I'll help you find the perfect place to stay!</p>
-          </div>
-        )}
-        
-        {messages.map((message) => (
-          <ChatMessage key={message.id} message={message} />
-        ))}
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.length === 0 && (
+            <div className="text-center text-gray-500 mt-12">
+              <div className="text-4xl mb-4">✈️</div>
+              <p>Tell me about your dream trip and I'll help you find the perfect place to stay!</p>
+            </div>
+          )}
+          
+          {messages.map((message, index) => (
+            <div key={message.id}>
+              <ChatMessage message={message} />
+              {/* Show hotel results after the second assistant message */}
+              {message.role === "assistant" && index === 2 && (
+                <div className="mt-4 flex justify-start">
+                  <div className="bg-white rounded-2xl p-4 max-w-full shadow-sm">
+                    <HotelResults />
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
 
-        {messages.length >= 4 && (
-          <>
-            <HotelRecommendations hotels={[]} />
-          </>
-        )}
-
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-white rounded-2xl p-4 max-w-[85%] shadow-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-white rounded-2xl p-4 max-w-[85%] shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
 
-      {/* Input */}
-      <div className="border-t bg-white p-4">
-        <form onSubmit={handleSendMessage} className="flex gap-2">
-          <Input
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Describe your ideal stay..."
-            className="flex-1 rounded-full"
-          />
-          <Button 
-            type="submit" 
-            size="icon"
-            className="rounded-full"
-            disabled={!inputValue.trim() || isLoading}
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        </form>
+        {/* Input */}
+        <div className="border-t bg-white p-4">
+          <form onSubmit={handleSendMessage} className="flex gap-2">
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Describe your ideal stay..."
+              className="flex-1 rounded-full"
+            />
+            <Button 
+              type="submit" 
+              size="icon"
+              className="rounded-full"
+              disabled={!inputValue.trim() || isLoading}
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );

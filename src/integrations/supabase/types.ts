@@ -9,7 +9,102 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      chat_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          last_message: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      flights: {
+        Row: {
+          airline: string
+          arrival_city: string
+          arrival_date: string
+          booking_reference: string
+          created_at: string
+          departure_city: string
+          departure_date: string
+          flight_number: string
+          id: string
+          price: number
+          status: string
+          user_id: string
+        }
+        Insert: {
+          airline: string
+          arrival_city: string
+          arrival_date: string
+          booking_reference: string
+          created_at?: string
+          departure_city: string
+          departure_date: string
+          flight_number: string
+          id?: string
+          price: number
+          status?: string
+          user_id: string
+        }
+        Update: {
+          airline?: string
+          arrival_city?: string
+          arrival_date?: string
+          booking_reference?: string
+          created_at?: string
+          departure_city?: string
+          departure_date?: string
+          flight_number?: string
+          id?: string
+          price?: number
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
