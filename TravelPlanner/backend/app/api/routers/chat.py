@@ -13,6 +13,7 @@ from app.services.auth_deps import get_current_user
 from app.schemas.auth import User
 from app.services.llm_tts_stt import stt, tts
 import logging
+from io import BytesIO
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
