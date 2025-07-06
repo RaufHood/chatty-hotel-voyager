@@ -1,6 +1,8 @@
 import logging
 from contextlib import contextmanager
 from typing import Generator, Optional
+from sqlmodel import Session, create_engine
+from sqlalchemy import URL
 from app.core.settings import settings
 from app.services.snowflake_db import SnowflakeDB
 
@@ -8,6 +10,38 @@ logger = logging.getLogger(__name__)
 
 # Global Snowflake database instance
 snowflake_db: Optional[SnowflakeDB] = None
+
+# SQLAlchemy engine for SQLModel operations
+engine = None
+
+def get_engine():
+    """Get or create SQLAlchemy engine for Snowflake"""
+    global engine
+    if engine is None:
+        # Build Snowflake connection URL
+        snowflake_url = URL.create(
+            "snowflake",
+            username=settings.snowflake_user,
+            password=settings.snowflake_password,
+            host=settings.snowflake_account,
+            database=settings.snowflake_database,
+            query={
+                "warehouse": settings.snowflake_warehouse,
+                "schema": settings.snowflake_schema,
+                "role": settings.snowflake_role
+            }
+        )
+        
+        engine = create_engine(snowflake_url, echo=False)
+        logger.info("✅ SQLAlchemy engine created for Snowflake")
+    
+    return engine
+
+def get_session() -> Generator[Session, None, None]:
+    """Get SQLModel session for database operations"""
+    engine = get_engine()
+    with Session(engine) as session:
+        yield session
 
 def init_database() -> SnowflakeDB:
     """Initialize and return Snowflake database connection"""
