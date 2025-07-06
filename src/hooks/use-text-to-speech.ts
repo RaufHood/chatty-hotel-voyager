@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { apiService } from '@/services/api';
 
 interface UseTextToSpeechReturn {
   isPlaying: boolean;
@@ -17,7 +18,7 @@ export const useTextToSpeech = (): UseTextToSpeechReturn => {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const speak = useCallback(async (text: string) => {
@@ -25,91 +26,99 @@ export const useTextToSpeech = (): UseTextToSpeechReturn => {
       setError(null);
       setIsProcessing(true);
       
-      // Stop any current speech
-      if (utteranceRef.current) {
-        speechSynthesis.cancel();
+      // Stop any current audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
       }
 
-      // Create new utterance
-      const utterance = new SpeechSynthesisUtterance(text);
-      utteranceRef.current = utterance;
+      // Get audio from backend TTS
+      const audioBlob = await apiService.textToSpeech(text);
+      const audioUrl = URL.createObjectURL(audioBlob);
 
-      // Configure voice settings
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-
-      // Try to use a more natural voice if available
-      const voices = speechSynthesis.getVoices();
-      const preferredVoice = voices.find(voice => 
-        voice.lang.includes('en') && 
-        (voice.name.includes('Neural') || voice.name.includes('Premium') || voice.name.includes('Enhanced'))
-      ) || voices.find(voice => voice.lang.includes('en')) || voices[0];
-      
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-      }
+      // Create audio element
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
 
       // Set up event handlers
-      utterance.onstart = () => {
+      audio.onloadstart = () => {
+        setIsProcessing(true);
+      };
+
+      audio.oncanplaythrough = () => {
         setIsProcessing(false);
         setIsPlaying(true);
         setProgress(0);
         
         // Start progress tracking
         progressIntervalRef.current = setInterval(() => {
-          setProgress(prev => Math.min(prev + 2, 95)); // Approximate progress
+          if (audio.duration) {
+            const currentProgress = (audio.currentTime / audio.duration) * 100;
+            setProgress(currentProgress);
+          }
         }, 100);
       };
 
-      utterance.onend = () => {
+      audio.onended = () => {
         setIsPlaying(false);
         setProgress(100);
         if (progressIntervalRef.current) {
           clearInterval(progressIntervalRef.current);
         }
         setTimeout(() => setProgress(0), 1000);
+        
+        // Clean up
+        URL.revokeObjectURL(audioUrl);
       };
 
-      utterance.onerror = (event) => {
+      audio.onerror = (event) => {
         setIsPlaying(false);
         setIsProcessing(false);
         setProgress(0);
         setError('Failed to play audio. Please try again.');
-        console.error('Speech synthesis error:', event);
+        console.error('Audio playback error:', event);
         if (progressIntervalRef.current) {
           clearInterval(progressIntervalRef.current);
         }
+        
+        // Clean up
+        URL.revokeObjectURL(audioUrl);
       };
 
-      utterance.onpause = () => {
+      audio.onpause = () => {
         setIsPlaying(false);
         if (progressIntervalRef.current) {
           clearInterval(progressIntervalRef.current);
         }
       };
 
-      utterance.onresume = () => {
+      audio.onplay = () => {
         setIsPlaying(true);
         // Resume progress tracking
         progressIntervalRef.current = setInterval(() => {
-          setProgress(prev => Math.min(prev + 2, 95));
+          if (audio.duration) {
+            const currentProgress = (audio.currentTime / audio.duration) * 100;
+            setProgress(currentProgress);
+          }
         }, 100);
       };
 
-      // Start speaking
-      speechSynthesis.speak(utterance);
+      // Start playing
+      await audio.play();
       
     } catch (err) {
       setIsProcessing(false);
       setIsPlaying(false);
-      setError('Speech synthesis not supported in this browser.');
+      setError('Failed to convert text to speech. Please try again.');
       console.error('TTS error:', err);
     }
   }, []);
 
   const stop = useCallback(() => {
-    speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     setIsPlaying(false);
     setIsProcessing(false);
     setProgress(0);
@@ -119,17 +128,23 @@ export const useTextToSpeech = (): UseTextToSpeechReturn => {
   }, []);
 
   const pause = useCallback(() => {
-    speechSynthesis.pause();
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
   }, []);
 
   const resume = useCallback(() => {
-    speechSynthesis.resume();
+    if (audioRef.current) {
+      audioRef.current.play();
+    }
   }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
       }

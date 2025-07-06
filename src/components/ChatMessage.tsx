@@ -1,7 +1,7 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Volume2, VolumeX, Loader2, Pause, Play } from 'lucide-react';
+import { Volume2, VolumeX, Loader2, Pause, Play, Mic } from 'lucide-react';
 import { useTextToSpeech } from '@/hooks/use-text-to-speech';
 
 interface Message {
@@ -9,6 +9,8 @@ interface Message {
   content: string;
   role: "user" | "assistant";
   timestamp: Date;
+  autoPlayTTS?: boolean;
+  isVoiceMessage?: boolean;
 }
 
 interface ChatMessageProps {
@@ -26,6 +28,8 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
     resume,
     error: ttsError 
   } = useTextToSpeech();
+  
+  const hasAutoPlayed = useRef(false);
 
   const handleTTSToggle = () => {
     if (isPlaying) {
@@ -41,6 +45,19 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
     stop();
   };
 
+  // Auto-play TTS for voice-initiated messages (only once)
+  useEffect(() => {
+    if (message.autoPlayTTS && message.role === "assistant" && !hasAutoPlayed.current) {
+      hasAutoPlayed.current = true;
+      // Add a small delay to ensure the message is fully rendered
+      const timer = setTimeout(() => {
+        speak(message.content);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [message.autoPlayTTS, message.content, message.role]);
+
   return (
     <div
       className={`chat-bubble ${
@@ -50,9 +67,17 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
       <p className="text-sm leading-relaxed">{message.content}</p>
       
       <div className="flex items-center justify-between mt-2">
-        <p className="text-xs opacity-70">
-          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs opacity-70">
+            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+          {message.isVoiceMessage && (
+            <div className="flex items-center gap-1">
+              <Mic className="w-3 h-3 text-blue-500" />
+              <span className="text-xs text-blue-500">Voice</span>
+            </div>
+          )}
+        </div>
         
         {/* TTS Controls for assistant messages */}
         {message.role === "assistant" && (
@@ -60,12 +85,15 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
             {isProcessing && (
               <div className="flex items-center gap-1 text-xs text-blue-600">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                <span>Processing...</span>
+                <span>{message.autoPlayTTS ? 'Auto-playing...' : 'Processing...'}</span>
               </div>
             )}
             
             {isPlaying && (
               <div className="flex items-center gap-1">
+                {message.autoPlayTTS && (
+                  <span className="text-xs text-green-600 mr-1">Auto</span>
+                )}
                 <div className="w-12 h-1 bg-gray-200 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-blue-500 transition-all duration-100"

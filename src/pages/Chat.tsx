@@ -16,6 +16,8 @@ interface Message {
   timestamp: Date;
   hotelData?: any[];
   selectedHotel?: any;
+  autoPlayTTS?: boolean;
+  isVoiceMessage?: boolean;
 }
 
 const Chat = () => {
@@ -75,7 +77,7 @@ const Chat = () => {
     }
   }, [location.state, sessionId]);
 
-  const sendMessageToBackend = async (message: string) => {
+  const sendMessageToBackend = async (message: string, autoPlayTTS: boolean = false) => {
     try {
       const request: ChatRequest = {
         message,
@@ -91,6 +93,7 @@ const Chat = () => {
         timestamp: new Date(),
         hotelData: response.hotel_data || undefined,
         selectedHotel: response.selected_hotel || undefined,
+        autoPlayTTS: autoPlayTTS,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -101,6 +104,7 @@ const Chat = () => {
         content: "I'm having trouble connecting to my services right now. Please try again later.",
         role: "assistant",
         timestamp: new Date(),
+        autoPlayTTS: autoPlayTTS,
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -132,32 +136,47 @@ const Chat = () => {
     if (isRecording) {
       const audioBlob = await stopRecording();
       if (audioBlob) {
-        // For now, simulate converting audio to text
-        // Later this will be sent to speech-to-text API
-        const userMessage: Message = {
-          id: Date.now().toString(),
-          content: "[Voice message: Audio recorded successfully - will be processed by speech-to-text]",
-          role: "user",
-          timestamp: new Date(),
-        };
+        try {
+          setIsLoading(true);
+          
+          // Convert audio to text using backend STT
+          const transcribedText = await apiService.speechToText(audioBlob);
+          
+          if (transcribedText.trim()) {
+            const userMessage: Message = {
+              id: Date.now().toString(),
+              content: transcribedText,
+              role: "user",
+              timestamp: new Date(),
+              isVoiceMessage: true,
+            };
 
-        setMessages(prev => [...prev, userMessage]);
-        setIsLoading(true);
-
-        // TODO: Send audioBlob to speech-to-text API
-        console.log('Audio blob recorded:', audioBlob);
-
-        // Simulate assistant response
-        setTimeout(() => {
-          const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            content: "I heard your voice message! Once we implement speech-to-text, I'll be able to understand and respond to your spoken requests.",
+            setMessages(prev => [...prev, userMessage]);
+            
+            // Send transcribed message to chat backend with TTS auto-play
+            await sendMessageToBackend(transcribedText, true);
+          } else {
+            // Show error if no text was transcribed
+            const errorMessage: Message = {
+              id: Date.now().toString(),
+              content: "I couldn't understand your voice message. Please try again.",
+              role: "assistant",
+              timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, errorMessage]);
+            setIsLoading(false);
+          }
+        } catch (error) {
+          console.error('Voice recording error:', error);
+          const errorMessage: Message = {
+            id: Date.now().toString(),
+            content: "I'm having trouble processing your voice message. Please try again or type your message.",
             role: "assistant",
             timestamp: new Date(),
           };
-          setMessages(prev => [...prev, assistantMessage]);
+          setMessages(prev => [...prev, errorMessage]);
           setIsLoading(false);
-        }, 1500);
+        }
       }
     } else {
       await startRecording();
