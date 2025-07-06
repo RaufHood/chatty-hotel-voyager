@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # Frontend URL for OAuth redirects
     frontend_url: str = "http://localhost:3000"
     
+    # Backend URL
+    backend_url: str = "http://localhost:8000"
+    
     # JWT Settings
     jwt_secret_key: str = "CHANGE_ME_JWT_SECRET"
     jwt_algorithm: str = "HS256"

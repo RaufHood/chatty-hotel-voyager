@@ -110,7 +110,7 @@ const Chat = () => {
       <ChatSidebar isOpen={showSidebar} onClose={() => setShowSidebar(false)} />
       
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col pb-16 md:pb-0">
         {/* Header */}
         <div className="bg-white border-b px-4 py-3 flex items-center gap-3">
           <Button

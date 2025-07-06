@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any
 from app.services.snowflake_db import snowflake_db
 from app.schemas.auth import OAuthProvider
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
-from app.services.jwt_service import create_access_token
+from app.services.jwt_service import JWTService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -45,13 +45,14 @@ class UserService:
             )
             
             if user_id:
-                # Generate JWT token for auto_token
-                access_token = create_access_token(
-                    data={"sub": user_data.email, "user_id": user_id}
-                )
-                
-                # Update user with auto_token
-                self.db.update_user(user_id, auto_token=access_token)
+                # Get the created user data
+                user_data_dict = self.get_user_by_id(user_id)
+                if user_data_dict:
+                    # Generate JWT token for auto_token
+                    token_response = JWTService.create_token_from_data(user_data_dict)
+                    
+                    # Update user with auto_token
+                    self.db.update_user(user_id, auto_token=token_response.access_token)
                 
                 # Return the created user
                 return self.get_user_by_id(user_id)
