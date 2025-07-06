@@ -12,7 +12,6 @@ class ChatRequest(BaseModel):
     """Chat request model"""
     message: str
     session_id: Optional[str] = None
-    user_id: Optional[str] = None
 
 class ChatResponse(BaseModel):
     """Chat response model"""
@@ -26,7 +25,6 @@ class ChatResponse(BaseModel):
 class ChatHistoryRequest(BaseModel):
     """Request to get chat history"""
     session_id: str
-    user_id: Optional[str] = None
 
 class ChatHistoryResponse(BaseModel):
     """Chat history response"""
@@ -35,5 +33,4 @@ class ChatHistoryResponse(BaseModel):
 
 class ClearChatRequest(BaseModel):
     """Request to clear chat history"""
-    session_id: str
-    user_id: Optional[str] = None 
+    session_id: str 

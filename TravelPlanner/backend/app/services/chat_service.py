@@ -17,8 +17,7 @@ class ChatService:
     async def process_message(
         self, 
         message: str, 
-        session_id: Optional[str] = None,
-        user_id: Optional[str] = None
+        session_id: Optional[str] = None
     ) -> ChatResponse:
         """Process a user message and return the agent's response"""
         

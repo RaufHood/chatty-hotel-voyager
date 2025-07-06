@@ -1,10 +1,9 @@
-from langchain.chat_models import ChatOpenAI
 from langchain.agents import initialize_agent, AgentType
 from langchain import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.schema import BaseMessage
 from app.services.lc_tools import hotel_search_tool, hotel_select_tool
-from langchain_community.chat_models import ChatGroq
+from langchain_groq import ChatGroq
 from app.core.settings import settings
 from typing import List, Dict, Optional
 import logging
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 # Initialize the LLM
 llm = ChatGroq(
     model="llama3-70b-8192",  # or "llama3-8b-8192" for smaller version
-    groq_api_key=settings.GROQ_API_KEY,
+    groq_api_key=settings.groq_api_key,
     temperature=0.3,
 )
 
