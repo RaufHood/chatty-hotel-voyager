@@ -121,7 +121,6 @@ const Chat = () => {
         {messages.length >= 4 && (
           <>
             <HotelRecommendations hotels={[]} />
-            <HotelRecommendations hotels={[]} />
           </>
         )}
 
