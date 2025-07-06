@@ -16,6 +16,8 @@ interface Message {
   timestamp: Date;
   hotelData?: any[];
   selectedHotel?: any;
+  autoPlayTTS?: boolean;
+  isVoiceMessage?: boolean;
 }
 
 const Chat = () => {
@@ -75,7 +77,7 @@ const Chat = () => {
     }
   }, [location.state, sessionId]);
 
-  const sendMessageToBackend = async (message: string) => {
+  const sendMessageToBackend = async (message: string, autoPlayTTS: boolean = false) => {
     try {
       const request: ChatRequest = {
         message,
@@ -91,6 +93,7 @@ const Chat = () => {
         timestamp: new Date(),
         hotelData: response.hotel_data || undefined,
         selectedHotel: response.selected_hotel || undefined,
+        autoPlayTTS: autoPlayTTS,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -101,6 +104,7 @@ const Chat = () => {
         content: "I'm having trouble connecting to my services right now. Please try again later.",
         role: "assistant",
         timestamp: new Date(),
+        autoPlayTTS: autoPlayTTS,
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -144,12 +148,13 @@ const Chat = () => {
               content: transcribedText,
               role: "user",
               timestamp: new Date(),
+              isVoiceMessage: true,
             };
 
             setMessages(prev => [...prev, userMessage]);
             
-            // Send transcribed message to chat backend
-            await sendMessageToBackend(transcribedText);
+            // Send transcribed message to chat backend with TTS auto-play
+            await sendMessageToBackend(transcribedText, true);
           } else {
             // Show error if no text was transcribed
             const errorMessage: Message = {

@@ -38,11 +38,45 @@ class ChatService:
             # Process with agent
             logger.info(f"Processing message for session {session_id}: {message[:100]}...")
             
+            # For now, use a simpler approach until we fix the agent
             # Get or create session-specific agent
-            agent = chat_memory.get_or_create_agent(session_id)
-            
-            # Run the agent with the message - use sync version for now
-            result = agent.run(message)
+            try:
+                agent = chat_memory.get_or_create_agent(session_id)
+                # Run the agent with the message - use sync version for now
+                result = agent.run(message)
+                
+                # Check if result is malformed
+                if not result or result.strip() == "<tool-use></tool-use>" or len(result.strip()) < 5:
+                    raise Exception("Agent returned malformed response")
+                    
+            except Exception as agent_error:
+                logger.warning(f"Agent failed, using fallback: {agent_error}")
+                # Fallback to direct LLM call
+                from langchain_groq import ChatGroq
+                from app.core.settings import settings
+                
+                fallback_llm = ChatGroq(
+                    model="llama3-70b-8192",
+                    groq_api_key=settings.groq_api_key,
+                    temperature=0.7,
+                )
+                
+                # Create a comprehensive travel assistant prompt
+                prompt = f"""You are a helpful travel assistant with access to a comprehensive traveling platform. You can suggest and help book flights and hotels using specialized search tools that find accommodations and flights based on specific criteria like location, dates, budget, and preferences.
+
+The user said: "{message}"
+
+Please provide a friendly, conversational response in 2-3 sentences. If the user is interested in travel planning, ask follow-up questions to gather the information needed for searches, such as:
+- Destination city/country
+- Check-in and check-out dates (for hotels)
+- Departure and arrival dates (for flights) 
+- Budget range
+- Number of travelers
+- Specific preferences (hotel amenities, flight times, etc.)
+
+Your goal is to collect enough details to make targeted searches and provide personalized recommendations. Be enthusiastic about helping them plan their perfect trip!"""
+                
+                result = fallback_llm.invoke(prompt).content
             
             # Create AI message
             ai_msg = AIMessage(content=result)
@@ -74,9 +108,9 @@ class ChatService:
             
         except Exception as e:
             logger.error(f"Error processing message for session {session_id}: {str(e)}")
-            # Return error response
+            # Return friendly error response
             return ChatResponse(
-                reply=f"I apologize, but I encountered an error while processing your request: {str(e)}",
+                reply="I apologize, but I'm having trouble processing your request right now. Could you please try asking me about your travel plans in a different way?",
                 session_id=session_id,
                 timestamp=datetime.now()
             )
