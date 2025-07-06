@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "CHANGE_ME_JWT_SECRET"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 30
+    
+    # API Keys
+    groq_api_key: Optional[str] = None
+    hotel_booking_key: Optional[str] = None
 
     class Config:
         env_file = ".env"
