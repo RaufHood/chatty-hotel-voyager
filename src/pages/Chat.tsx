@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import ChatMessage from "@/components/ChatMessage";
-import HotelRecommendations from "@/components/HotelRecommendations";
+import { ChatMessage } from "@/components/ChatMessage";
+import { HotelRecommendations } from "@/components/HotelRecommendations";
 
 interface Message {
   id: string;
   content: string;
-  isUser: boolean;
+  role: "user" | "assistant";
   timestamp: Date;
 }
 
@@ -29,7 +29,7 @@ const Chat = () => {
       const userMessage: Message = {
         id: Date.now().toString(),
         content: initialMessage,
-        isUser: true,
+        role: "user",
         timestamp: new Date(),
       };
       setMessages([userMessage]);
@@ -39,7 +39,7 @@ const Chat = () => {
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           content: "I'd be happy to help you find the perfect stay! Let me ask a few quick questions to narrow down the best options for you. What dates are you looking at, and do you have a preferred budget range?",
-          isUser: false,
+          role: "assistant",
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, assistantMessage]);
@@ -54,7 +54,7 @@ const Chat = () => {
     const userMessage: Message = {
       id: Date.now().toString(),
       content: inputValue,
-      isUser: true,
+      role: "user",
       timestamp: new Date(),
     };
 
@@ -67,7 +67,7 @@ const Chat = () => {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: "Let me search for the best hotels for you based on your preferences...",
-        isUser: false,
+        role: "assistant",
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, assistantMessage]);
@@ -104,7 +104,7 @@ const Chat = () => {
         ))}
 
         {messages.length >= 4 && (
-          <HotelRecommendations />
+          <HotelRecommendations hotels={[]} />
         )}
 
         {isLoading && (
