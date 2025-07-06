@@ -3,10 +3,11 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, ArrowLeft, Menu } from "lucide-react";
+import { Send, ArrowLeft, Menu, Mic, MicOff } from "lucide-react";
 import { ChatMessage } from "@/components/ChatMessage";
 import { HotelResults } from "@/components/HotelResults";
 import { ChatSidebar } from "@/components/ChatSidebar";
+import { useVoiceRecording } from "@/hooks/use-voice-recording";
 
 interface Message {
   id: string;
@@ -24,6 +25,13 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const { 
+    isRecording, 
+    startRecording, 
+    stopRecording, 
+    error: recordingError 
+  } = useVoiceRecording();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -102,6 +110,42 @@ const Chat = () => {
       setMessages(prev => [...prev, assistantMessage]);
       setIsLoading(false);
     }, 1500);
+  };
+
+  const handleVoiceRecording = async () => {
+    if (isRecording) {
+      const audioBlob = await stopRecording();
+      if (audioBlob) {
+        // For now, simulate converting audio to text
+        // Later this will be sent to speech-to-text API
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          content: "[Voice message: Audio recorded successfully - will be processed by speech-to-text]",
+          role: "user",
+          timestamp: new Date(),
+        };
+
+        setMessages(prev => [...prev, userMessage]);
+        setIsLoading(true);
+
+        // TODO: Send audioBlob to speech-to-text API
+        console.log('Audio blob recorded:', audioBlob);
+
+        // Simulate assistant response
+        setTimeout(() => {
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            content: "I heard your voice message! Once we implement speech-to-text, I'll be able to understand and respond to your spoken requests.",
+            role: "assistant",
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, assistantMessage]);
+          setIsLoading(false);
+        }, 1500);
+      }
+    } else {
+      await startRecording();
+    }
   };
 
   return (
@@ -183,16 +227,29 @@ const Chat = () => {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Describe your ideal stay..."
               className="flex-1 rounded-full"
+              disabled={isRecording}
             />
+            <Button 
+              type="button"
+              size="icon"
+              className={`rounded-full ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-500 hover:bg-gray-600'}`}
+              onClick={handleVoiceRecording}
+              disabled={isLoading}
+            >
+              {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </Button>
             <Button 
               type="submit" 
               size="icon"
               className="rounded-full"
-              disabled={!inputValue.trim() || isLoading}
+              disabled={!inputValue.trim() || isLoading || isRecording}
             >
               <Send className="w-4 h-4" />
             </Button>
           </form>
+          {recordingError && (
+            <p className="text-red-500 text-sm mt-2">{recordingError}</p>
+          )}
         </div>
       </div>
     </div>
