@@ -1,7 +1,10 @@
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Send, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Send, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ChatMessage } from "@/components/ChatMessage";
@@ -10,9 +13,8 @@ import { HotelRecommendations } from "@/components/HotelRecommendations";
 interface Message {
   id: string;
   content: string;
-  role: "user" | "assistant";
+  isUser: boolean;
   timestamp: Date;
-  hotels?: any[];
 }
 
 const Chat = () => {
@@ -56,8 +58,9 @@ const Chat = () => {
     }
   }, [location.state]);
 
-  const handleSendMessage = async () => {
-    if (!input.trim()) return;
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim()) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -86,20 +89,34 @@ const Chat = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center justify-center">
-          <MessageCircle className="w-6 h-6 text-primary mr-2" />
-          <h1 className="text-lg font-semibold">TravelChat</h1>
+      <div className="bg-white border-b px-4 py-3 flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/")}
+          className="p-2"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">T</span>
+          </div>
+          <h1 className="font-semibold text-lg text-primary">Travelry</h1>
         </div>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div key={message.id}>
-            <ChatMessage message={message} />
-            {message.hotels && <HotelRecommendations hotels={message.hotels} />}
+        {messages.length === 0 && (
+          <div className="text-center text-gray-500 mt-12">
+            <div className="text-4xl mb-4">✈️</div>
+            <p>Tell me about your dream trip and I'll help you find the perfect place to stay!</p>
           </div>
+        )}
+        
+        {messages.map((message) => (
+          <ChatMessage key={message.id} message={{ ...message, role: message.isUser ? "user" : "assistant" }} />
         ))}
 
         {messages.length >= 4 && (
@@ -107,41 +124,36 @@ const Chat = () => {
         )}
 
         {isLoading && (
-          <div className="chat-bubble chat-bubble-assistant">
-            <div className="flex items-center space-x-2">
-              <div className="animate-pulse flex space-x-1">
+          <div className="flex justify-start">
+            <div className="bg-white rounded-2xl p-4 max-w-[85%] shadow-sm">
+              <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
               </div>
-              <span className="text-sm text-gray-500">Finding options...</span>
             </div>
           </div>
         )}
-        
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div className="bg-white border-t border-gray-200 p-4">
-        <div className="flex space-x-2">
+      <div className="border-t bg-white p-4">
+        <form onSubmit={handleSendMessage} className="flex gap-2">
           <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Describe your ideal trip..."
-            className="flex-1 rounded-xl border-gray-300 focus:border-primary"
-            disabled={isLoading}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Describe your ideal stay..."
+            className="flex-1 rounded-full"
           />
-          <Button
-            onClick={handleSendMessage}
-            disabled={!input.trim() || isLoading}
+          <Button 
+            type="submit" 
             size="icon"
-            className="rounded-xl bg-primary hover:bg-primary/90"
+            className="rounded-full"
+            disabled={!inputValue.trim() || isLoading}
           >
             <Send className="w-4 h-4" />
           </Button>
-        </div>
+        </form>
       </div>
     </div>
   );

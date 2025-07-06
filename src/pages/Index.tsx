@@ -8,13 +8,122 @@ import { MessageCircle, Star, Clock, Shield, Search, User, MapPin, Plane } from 
 
 const Index = () => {
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
 
-  const handleStartChat = () => {
-    navigate("/chat");
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate("/chat", { state: { initialMessage: searchQuery } });
+    }
+  };
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // TODO: Implement OAuth login with backend
+    console.log("Login submitted");
+    setIsLoginOpen(false);
+  };
+
+  const handleSignup = (e: React.FormEvent) => {
+    e.preventDefault();
+    // TODO: Implement OAuth signup with backend
+    console.log("Signup submitted");
+    setIsSignupOpen(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50">
+      {/* Header with Logo and Auth */}
+      <div className="container mx-auto px-4 pt-6">
+        <div className="flex justify-between items-center">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+              <span className="text-white font-bold text-lg">T</span>
+            </div>
+            <h1 className="text-2xl font-bold text-primary">Travelry</h1>
+          </div>
+
+          {/* Auth Buttons */}
+          <div className="flex gap-2">
+            <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <User className="w-4 h-4 mr-2" />
+                  Login
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Login to Travelry</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input id="login-email" type="email" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <Input id="login-password" type="password" required />
+                  </div>
+                  <Button type="submit" className="w-full">
+                    Login
+                  </Button>
+                  <div className="text-center text-sm text-gray-500">
+                    OAuth integration coming soon
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isSignupOpen} onOpenChange={setIsSignupOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Sign Up
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Join Travelry</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSignup} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-firstname">First Name</Label>
+                      <Input id="signup-firstname" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-lastname">Last Name</Label>
+                      <Input id="signup-lastname" required />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input id="signup-email" type="email" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input id="signup-password" type="password" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password-confirm">Confirm Password</Label>
+                    <Input id="signup-password-confirm" type="password" required />
+                  </div>
+                  <Button type="submit" className="w-full">
+                    Create Account
+                  </Button>
+                  <div className="text-center text-sm text-gray-500">
+                    OAuth integration coming soon
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className="container mx-auto px-4 pt-12 pb-8">
         <div className="text-center max-w-2xl mx-auto">
