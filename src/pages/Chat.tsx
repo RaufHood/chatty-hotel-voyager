@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import ChatMessage from "@/components/ChatMessage";
-import HotelRecommendations from "@/components/HotelRecommendations";
+import { ChatMessage } from "@/components/ChatMessage";
+import { HotelRecommendations } from "@/components/HotelRecommendations";
 
 interface Message {
   id: string;
@@ -14,6 +14,37 @@ interface Message {
   isUser: boolean;
   timestamp: Date;
 }
+
+// Mock hotel data for recommendations
+const mockHotels = [
+  {
+    id: "1",
+    name: "Hotel Barcelona Center",
+    location: "Barcelona, Spain",
+    price: 89,
+    rating: 4.2,
+    image: "/placeholder.svg",
+    type: "Hotel"
+  },
+  {
+    id: "2", 
+    name: "Hostel Gracia",
+    location: "Barcelona, Spain",
+    price: 25,
+    rating: 4.0,
+    image: "/placeholder.svg",
+    type: "Hostel"
+  },
+  {
+    id: "3",
+    name: "Casa Boutique",
+    location: "Barcelona, Spain", 
+    price: 150,
+    rating: 4.8,
+    image: "/placeholder.svg",
+    type: "Boutique"
+  }
+];
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -87,7 +118,12 @@ const Chat = () => {
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="font-semibold text-lg">TravelChat</h1>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">T</span>
+          </div>
+          <h1 className="font-semibold text-lg text-primary">Travelry</h1>
+        </div>
       </div>
 
       {/* Messages */}
@@ -100,11 +136,11 @@ const Chat = () => {
         )}
         
         {messages.map((message) => (
-          <ChatMessage key={message.id} message={message} />
+          <ChatMessage key={message.id} message={{ ...message, role: message.isUser ? "user" : "assistant" }} />
         ))}
 
         {messages.length >= 4 && (
-          <HotelRecommendations />
+          <HotelRecommendations hotels={mockHotels} />
         )}
 
         {isLoading && (

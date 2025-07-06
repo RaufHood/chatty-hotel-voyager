@@ -22,102 +22,116 @@ const Index = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement login logic with backend
+    // TODO: Implement OAuth login with backend
     console.log("Login submitted");
     setIsLoginOpen(false);
   };
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement signup logic with backend
+    // TODO: Implement OAuth signup with backend
     console.log("Signup submitted");
     setIsSignupOpen(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50">
-      {/* Header with Auth */}
+      {/* Header with Logo and Auth */}
       <div className="container mx-auto px-4 pt-6">
-        <div className="flex justify-end gap-2">
-          <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <User className="w-4 h-4 mr-2" />
-                Login
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Login to TravelChat</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input id="login-email" type="email" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input id="login-password" type="password" required />
-                </div>
-                <Button type="submit" className="w-full">
+        <div className="flex justify-between items-center">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+              <span className="text-white font-bold text-lg">T</span>
+            </div>
+            <h1 className="text-2xl font-bold text-primary">Travelry</h1>
+          </div>
+
+          {/* Auth Buttons */}
+          <div className="flex gap-2">
+            <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <User className="w-4 h-4 mr-2" />
                   Login
                 </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Login to Travelry</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input id="login-email" type="email" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <Input id="login-password" type="password" required />
+                  </div>
+                  <Button type="submit" className="w-full">
+                    Login
+                  </Button>
+                  <div className="text-center text-sm text-gray-500">
+                    OAuth integration coming soon
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
 
-          <Dialog open={isSignupOpen} onOpenChange={setIsSignupOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                Sign Up
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Join TravelChat</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSignup} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-firstname">First Name</Label>
-                    <Input id="signup-firstname" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-lastname">Last Name</Label>
-                    <Input id="signup-lastname" required />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input id="signup-email" type="email" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input id="signup-password" type="password" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password-confirm">Confirm Password</Label>
-                  <Input id="signup-password-confirm" type="password" required />
-                </div>
-                <Button type="submit" className="w-full">
-                  Create Account
+            <Dialog open={isSignupOpen} onOpenChange={setIsSignupOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Sign Up
                 </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Join Travelry</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSignup} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-firstname">First Name</Label>
+                      <Input id="signup-firstname" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-lastname">Last Name</Label>
+                      <Input id="signup-lastname" required />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input id="signup-email" type="email" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input id="signup-password" type="password" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password-confirm">Confirm Password</Label>
+                    <Input id="signup-password-confirm" type="password" required />
+                  </div>
+                  <Button type="submit" className="w-full">
+                    Create Account
+                  </Button>
+                  <div className="text-center text-sm text-gray-500">
+                    OAuth integration coming soon
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
 
       {/* Hero Section */}
-      <div className="container mx-auto px-4 pt-16 pb-8">
+      <div className="container mx-auto px-4 pt-12 pb-8">
         <div className="text-center max-w-3xl mx-auto">
           <div className="mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-6">
-              <MessageCircle className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
               Find Your Perfect Stay
-            </h1>
+            </h2>
             <p className="text-xl text-gray-600 mb-12">
               Skip the endless scrolling. Just tell us what you need and we'll find the best hotels at transparent prices.
             </p>
