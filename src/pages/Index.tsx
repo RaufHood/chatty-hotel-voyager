@@ -1,7 +1,10 @@
-
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Star, Clock, Shield } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { MessageCircle, Star, Clock, Shield, Search, User, MapPin, Plane } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -20,20 +23,154 @@ const Index = () => {
               <MessageCircle className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Find Your Perfect Stay
+              Hotel booking in seconds
             </h1>
             <p className="text-xl text-gray-600 mb-8">
               Skip the endless scrolling. Just tell us what you need and we'll find the best hotels at transparent prices.
             </p>
           </div>
           
+          {/* Perplexity-style search input */}
+          <form onSubmit={handleSearch} className="mb-8">
+            <div className="relative max-w-2xl mx-auto">
+              <div className="relative bg-white rounded-2xl shadow-lg border border-gray-200 p-1">
+                <div className="flex items-center px-4 py-3">
+                  <Search className="w-5 h-5 text-gray-400 mr-3 flex-shrink-0" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="I need a hotel in Paris for next weekend..."
+                    className="border-0 bg-transparent text-lg placeholder:text-gray-500 focus-visible:ring-0 flex-1"
+                  />
+                  <Button 
+                    type="submit"
+                    className="ml-2 bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-xl"
+                    disabled={!searchQuery.trim()}
+                  >
+                    Search
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Destinations Section */}
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            Discover Amazing Destinations
+          </h2>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            From vibrant cities to cultural gems, find your perfect stay in the world's most exciting destinations
+          </p>
+        </div>
+        
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {/* Barcelona */}
+          <div className="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+            <div className="relative h-80">
+              <img 
+                src="/barcelona.webp" 
+                alt="Barcelona, Spain" 
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                <div className="flex items-center mb-2">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  <span className="text-sm font-medium">Barcelona, Spain</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Barcelona</h3>
+                <p className="text-sm text-gray-200 mb-4">
+                  Experience the magic of Gaudí's architecture, vibrant street life, and Mediterranean charm
+                </p>
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={() => navigate("/chat", { state: { initialMessage: "I want to find hotels in Barcelona" } })}
+                  className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border-white/30"
+                >
+                  <Plane className="w-4 h-4 mr-2" />
+                  Find Hotels
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* London */}
+          <div className="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+            <div className="relative h-80">
+              <img 
+                src="/london.jpg" 
+                alt="London, UK" 
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                <div className="flex items-center mb-2">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  <span className="text-sm font-medium">London, UK</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-2">London</h3>
+                <p className="text-sm text-gray-200 mb-4">
+                  Discover historic landmarks, world-class museums, and the perfect blend of tradition and innovation
+                </p>
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={() => navigate("/chat", { state: { initialMessage: "I want to find hotels in London" } })}
+                  className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border-white/30"
+                >
+                  <Plane className="w-4 h-4 mr-2" />
+                  Find Hotels
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Singapore */}
+          <div className="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+            <div className="relative h-80">
+              <img 
+                src="/singapore.webp" 
+                alt="Singapore" 
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                <div className="flex items-center mb-2">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  <span className="text-sm font-medium">Singapore</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Singapore</h3>
+                <p className="text-sm text-gray-200 mb-4">
+                  Explore futuristic architecture, diverse cultures, and the perfect fusion of nature and urban life
+                </p>
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={() => navigate("/chat", { state: { initialMessage: "I want to find hotels in Singapore" } })}
+                  className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border-white/30"
+                >
+                  <Plane className="w-4 h-4 mr-2" />
+                  Find Hotels
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Call to Action */}
+        <div className="text-center mt-12">
+          <p className="text-gray-600 mb-4">Ready to explore more destinations?</p>
           <Button 
-            size="lg" 
-            onClick={handleStartChat}
-            className="bg-primary hover:bg-primary/90 text-white px-8 py-4 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 animate-pulse"
+            onClick={() => navigate("/chat")}
+            className="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-xl text-lg"
           >
-            <MessageCircle className="w-5 h-5 mr-2" />
-            Start Chat
+            <Search className="w-5 h-5 mr-2" />
+            Start Your Journey
           </Button>
         </div>
       </div>

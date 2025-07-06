@@ -2,7 +2,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MessageCircle } from "lucide-react";
+import { Send, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { ChatMessage } from "@/components/ChatMessage";
 import { HotelRecommendations } from "@/components/HotelRecommendations";
 
@@ -32,94 +33,54 @@ const Chat = () => {
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const simulateAssistantResponse = async (userMessage: string) => {
-    setIsLoading(true);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    let response = "";
-    let hotels = null;
-
-    // Simple keyword-based responses for demo
-    if (userMessage.toLowerCase().includes("berlin") || userMessage.toLowerCase().includes("germany")) {
-      response = "Great choice! Berlin has amazing options. Based on your preferences, here are some perfect matches:";
-      hotels = [
-        {
-          id: "1",
-          name: "The Circus Hostel",
-          location: "Mitte, Berlin",
-          price: 28,
-          rating: 4.5,
-          image: "https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=400&h=300&fit=crop",
-          type: "Hostel"
-        },
-        {
-          id: "2",
-          name: "Hotel Adlon Kempinski",
-          location: "Brandenburg Gate, Berlin",
-          price: 450,
-          rating: 4.8,
-          image: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=300&fit=crop",
-          type: "Luxury Hotel"
-        },
-        {
-          id: "3",
-          name: "Meininger Hotel Berlin",
-          location: "Alexanderplatz, Berlin",
-          price: 89,
-          rating: 4.2,
-          image: "https://images.unsplash.com/photo-1472396961693-142e6e269027?w=400&h=300&fit=crop",
-          type: "Hotel"
-        }
-      ];
-    } else if (userMessage.toLowerCase().includes("budget") || userMessage.toLowerCase().includes("cheap")) {
-      response = "I understand you're looking for budget-friendly options. What's your ideal price range per night, and which city are you considering?";
-    } else if (userMessage.toLowerCase().includes("luxury") || userMessage.toLowerCase().includes("expensive")) {
-      response = "Looking for a premium experience! What destination did you have in mind? I can find the finest hotels with top-notch amenities.";
-    } else if (userMessage.toLowerCase().includes("weekend") || userMessage.toLowerCase().includes("dates")) {
-      response = "Perfect! Could you share your specific dates and which city you'd like to visit? This helps me find the best availability and prices.";
-    } else {
-      response = "That sounds interesting! Could you tell me a bit more about your destination, dates, and what kind of accommodation you prefer? (hotel, hostel, budget range)";
+    const initialMessage = location.state?.initialMessage;
+    if (initialMessage) {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        content: initialMessage,
+        role: "user",
+        timestamp: new Date(),
+      };
+      setMessages([userMessage]);
+      
+      // Simulate assistant response
+      setTimeout(() => {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: "I'd be happy to help you find the perfect stay! Let me ask a few quick questions to narrow down the best options for you. What dates are you looking at, and do you have a preferred budget range?",
+          role: "assistant",
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      }, 1000);
     }
-
-    const assistantMessage: Message = {
-      id: Date.now().toString(),
-      content: response,
-      role: "assistant",
-      timestamp: new Date(),
-      hotels
-    };
-
-    setMessages(prev => [...prev, assistantMessage]);
-    setIsLoading(false);
-  };
+  }, [location.state]);
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: input,
+      content: inputValue,
       role: "user",
       timestamp: new Date(),
     };
 
     setMessages(prev => [...prev, userMessage]);
-    const currentInput = input;
-    setInput("");
+    setInputValue("");
+    setIsLoading(true);
 
-    await simulateAssistantResponse(currentInput);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
+    // Simulate assistant response
+    setTimeout(() => {
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "Let me search for the best hotels for you based on your preferences...",
+        role: "assistant",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+      setIsLoading(false);
+    }, 1500);
   };
 
   return (
@@ -140,7 +101,11 @@ const Chat = () => {
             {message.hotels && <HotelRecommendations hotels={message.hotels} />}
           </div>
         ))}
-        
+
+        {messages.length >= 4 && (
+          <HotelRecommendations hotels={[]} />
+        )}
+
         {isLoading && (
           <div className="chat-bubble chat-bubble-assistant">
             <div className="flex items-center space-x-2">
