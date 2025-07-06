@@ -2,7 +2,7 @@ from langchain.agents import initialize_agent, AgentType
 from langchain_core.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain_core.messages import BaseMessage
-from app.services.lc_tools import hotel_search_tool, hotel_select_tool
+from app.services.lc_tools import hotel_search, choose_hotel
 from langchain_groq import ChatGroq
 from app.core.settings import settings
 from typing import List, Dict, Optional
@@ -17,7 +17,7 @@ llm = ChatGroq(
     temperature=0.3,
 )
 
-TOOLS = [hotel_search_tool, hotel_select_tool]
+TOOLS = [hotel_search, choose_hotel]
 
 SYSTEM_PROMPT = """You are TripPlanner, a professional travel agent.
 When needed, call hotel_search or choose_hotel tools to recommend hotels. Prioritize the user's budget and hotel rating"""
