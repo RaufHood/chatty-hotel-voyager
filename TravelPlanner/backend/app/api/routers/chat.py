@@ -9,7 +9,9 @@ from app.schemas.chat import (
 )
 from app.services.chat_service import chat_service
 from app.services.auth_deps import get_current_user
+from app.services.auth_deps import get_current_user
 from app.schemas.auth import User
+from app.services.llm_tts_stt import stt, tts
 import logging
 
 logger = logging.getLogger(__name__)
@@ -87,3 +89,25 @@ async def chat_health():
     Health check endpoint for the chat service.
     """
     return {"status": "healthy", "service": "chat"}
+    
+
+@app.post("/tts")
+async def text_to_speech(payload: TTSPayload):
+    try:
+        text = payload.dict()['text']
+        output = tts(text)
+        buffer = BytesIO(output)
+        return StreamingResponse(buffer, media_type="application/octet-stream")
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=400, detail=str(e))
+        
+@app.post("/stt")
+async def speect_to_text(payload: UploadFile = File(...)):
+    try:
+        audio = await payload.read()
+        output = stt(audio)
+        return {"voice": output}
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=400, detail=str(e))

@@ -37,3 +37,7 @@ class ClearChatRequest(BaseModel):
     """Request to clear chat history"""
     session_id: str
     user_id: Optional[str] = None 
+    
+class TTSPayload(BaseModel):
+    """Request for TTS"""
+    text: str
