@@ -32,7 +32,7 @@ const BottomNavigation = () => {
     },
     {
       icon: Heart,
-      label: 'Recommendations',
+      label: 'For You',
       path: '/recommendations',
       isActive: location.pathname === '/recommendations'
     },
