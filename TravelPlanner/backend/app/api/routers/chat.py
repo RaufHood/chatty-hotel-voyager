@@ -19,7 +19,7 @@ class TTSPayload(BaseModel):
     text: str
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/chat", tags=["chat"])
+router = APIRouter(tags=["chat"])
 
 @router.post("/", response_model=ChatResponse)
 async def chat(request: ChatRequest):

@@ -34,7 +34,7 @@ class ApiService {
 
   async chat(request: ChatRequest): Promise<ChatResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/chat/chat/`, {
+      const response = await fetch(`${this.baseUrl}/api/chat/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,6 +86,51 @@ class ApiService {
     } catch (error) {
       console.error('Clear chat history error:', error);
       return false;
+    }
+  }
+
+  // Speech-to-Text API
+  async speechToText(audioBlob: Blob): Promise<string> {
+    try {
+      const formData = new FormData();
+      formData.append('payload', audioBlob, 'audio.webm');
+
+      const response = await fetch(`${this.baseUrl}/api/chat/stt`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.voice || '';
+    } catch (error) {
+      console.error('Speech-to-text error:', error);
+      throw new Error('Failed to convert speech to text');
+    }
+  }
+
+  // Text-to-Speech API
+  async textToSpeech(text: string): Promise<Blob> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/chat/tts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.blob();
+    } catch (error) {
+      console.error('Text-to-speech error:', error);
+      throw new Error('Failed to convert text to speech');
     }
   }
 
