@@ -18,6 +18,7 @@ create or replace TABLE CHATTY_HOTEL_VOYAGER.DBO.TRIPS (
     USER_ID NUMBER(38,0),
     DATE_START TIMESTAMP_NTZ(9),
     DATE_END TIMESTAMP_NTZ(9),
+    TRIP_STATUS VARCHAR(30), --past, in progress, upcoming 
     primary key (TRIP_ID),
     foreign key (USER_ID) references CHATTY_HOTEL_VOYAGER.DBO.USERS(USER_ID)
 );
@@ -41,10 +42,24 @@ create or replace TABLE CHATTY_HOTEL_VOYAGER.DBO.USERS (
     EMAIL VARCHAR(30),
     NAME VARCHAR(30),
     SURNAME VARCHAR(30),
-    AUTO_TOKEN VARCHAR(255),
+    PHONE VARCHAR(20),
+    AUTO_TOKEN VARCHAR(255), --for Google OAuth
+    PWD_HASH CHAR(64), --SHA256 password hash,
     primary key (USER_ID)
 );
 
+create or replace TABLE CHATTY_HOTEL_VOYAGER.DBO.CONVERSATION_HEADER (
+    COVNERSATION_ID NUMBER(38,0) NOT NULL autoincrement start 1 increment 1 noorder,
+    USER_ID NUMBER(38,0),
+    TRIP_ID NUMBER(38,0),
+    foreign key (USER_ID) references CHATTY_HOTEL_VOYAGER.DBO.USERS(USER_ID),
+    foreign key (TRIP_ID) references CHATTY_HOTEL_VOYAGER.DBO.TRIPS(TRIP_ID),
+);
 
-
-
+create or replace TABLE CHATTY_HOTEL_VOYAGER.DBO.CONVERSATION_CONTENT (
+    REPLY_ID NUMBER(38,0) NOT NULL autoincrement start 1 increment 1 noorder,
+    CONVERSATION_ID NUMBER(38,0),
+    REPLY_TIMESTAMP TIMESTAMP_NTZ(9), --assume GMT +2:00 for simplifity, we can add timezone definition later
+    ROLE VARCHAR(10), --user or chatbot
+    CONTENT VARCHAR(MAX) --should we also add file attatchments?
+);
