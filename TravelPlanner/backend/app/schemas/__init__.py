@@ -3,6 +3,7 @@ from .user import *
 from .hotel import *
 from .trip import *
 from .trip_leg import *
+from .chat import *
 
 __all__ = [
     # Auth schemas
@@ -15,5 +16,8 @@ __all__ = [
     # Trip schemas
     "TripBase", "TripCreate", "TripUpdate", "TripResponse",
     # Trip Leg schemas
-    "TripLegBase", "TripLegCreate", "TripLegUpdate", "TripLegResponse"
+    "TripLegBase", "TripLegCreate", "TripLegUpdate", "TripLegResponse",
+    # Chat schemas
+    "ChatMessage", "ChatRequest", "ChatResponse", "ChatHistoryRequest", 
+    "ChatHistoryResponse", "ClearChatRequest"
 ]
