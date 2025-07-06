@@ -61,5 +61,6 @@ create or replace TABLE CHATTY_HOTEL_VOYAGER.DBO.CONVERSATION_CONTENT (
     CONVERSATION_ID NUMBER(38,0),
     REPLY_TIMESTAMP TIMESTAMP_NTZ(9), --assume GMT +2:00 for simplifity, we can add timezone definition later
     ROLE VARCHAR(10), --user or chatbot
-    CONTENT VARCHAR(MAX) --should we also add file attatchments?
+    CONTENT VARCHAR(MAX), --should we also add file attatchments?
+    foreign key CONVERSATION_ID references CONVERSATION_HEADER(CONVERSATION_ID)
 );
