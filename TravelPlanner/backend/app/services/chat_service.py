@@ -50,8 +50,8 @@ class ChatService:
                     raise Exception("Agent returned malformed response")
                     
             except Exception as agent_error:
-                logger.warning(f"Agent failed, using fallback: {agent_error}")
-                # Fallback to direct LLM call
+                logger.warning(f"Agent failed, using fallback with memory: {agent_error}")
+                # Fallback to direct LLM call WITH MEMORY
                 from langchain_groq import ChatGroq
                 from app.core.settings import settings
                 
@@ -61,8 +61,22 @@ class ChatService:
                     temperature=0.7,
                 )
                 
-                # Create a comprehensive travel assistant prompt
+                # Get conversation history for context
+                history = chat_memory.get_history(session_id)
+                
+                # Build context from conversation history
+                context = ""
+                if history:
+                    context = "\n\nConversation history:\n"
+                    for msg in history[-6:]:  # Last 6 messages for context
+                        if hasattr(msg, 'content'):
+                            role = "User" if msg.__class__.__name__ == "HumanMessage" else "Assistant"
+                            context += f"{role}: {msg.content}\n"
+                
+                # Create a comprehensive travel assistant prompt WITH MEMORY
                 prompt = f"""You are a helpful travel assistant with access to a comprehensive traveling platform. You can suggest and help book flights and hotels using specialized search tools that find accommodations and flights based on specific criteria like location, dates, budget, and preferences.
+
+{context}
 
 The user said: "{message}"
 

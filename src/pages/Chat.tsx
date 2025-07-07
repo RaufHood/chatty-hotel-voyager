@@ -30,8 +30,8 @@ const Chat = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Generate a session ID if not provided
-  const currentSessionId = sessionId || `session_${Date.now()}`;
+  // Generate a session ID if not provided (use state to keep it consistent)
+  const [currentSessionId] = useState(() => sessionId || `session_${Date.now()}`);
   
   const { 
     isRecording, 
