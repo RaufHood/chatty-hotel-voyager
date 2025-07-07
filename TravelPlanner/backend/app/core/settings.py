@@ -5,8 +5,15 @@ class Settings(BaseSettings):
     app_name: str = "TravelPlanner"
     secret_key: str = "CHANGE_ME"
     enable_celery: bool = "y" == "y"
-    database_url: str = "postgresql+psycopg://postgres:postgres@db:5432/TravelPlanner"
+    #database_url: str = "postgresql+psycopg://postgres:postgres@db:5432/TravelPlanner"
+    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/TravelPlanner"
+
     redis_url: str = "redis://redis:6379/0"
+    # ✅ Add new Twilio fields:
+    twilio_account_sid: str
+    twilio_auth_token: str
+    twilio_phone_number: str
+    twilio_verify_service_sid: str
     
     # Snowflake Database Settings
     snowflake_account: Optional[str] = None

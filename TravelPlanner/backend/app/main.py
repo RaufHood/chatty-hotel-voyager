@@ -1,3 +1,6 @@
+# add new router for SMS verification
+# TravelPlanner/backend/app/api/routers/sms_verification.py
+from app.api.routers import chat, trip, auth, hotel, pay, sms_verification
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
@@ -37,6 +40,7 @@ def configure_router(app: FastAPI):
     app.include_router(trip.router, prefix="/api/trips", tags=["trips"])
     app.include_router(hotel.router, prefix="/api", tags=["hotels"])
     app.include_router(pay.router, prefix="/api", tags=["payments"])
+    app.include_router(sms_verification.router, prefix="/api/sms", tags=["Twilio SMS"])  # ✅ NEW
 
     @app.get("/", tags=["root"])
     async def landing():

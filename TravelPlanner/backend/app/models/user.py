@@ -15,6 +15,10 @@ class User(SQLModel, table=True):
     name: str = Field(max_length=30, alias="NAME")
     surname: str = Field(max_length=30, alias="SURNAME")
     auto_token: Optional[str] = Field(default=None, max_length=255, alias="AUTO_TOKEN")
+    phone_number: Optional[str] = Field(default=None, max_length=20, alias="PHONE_NUMBER") # ✅ New fields
+    is_verified: bool = Field(default=False, alias="IS_VERIFIED")
+    test_column: Optional[str] = Field(default=None, alias="TEST_COLUMN") # temporary test field
+
     
     # Additional fields for OAuth integration (not in Snowflake schema but needed for app)
     oauth_provider: Optional[OAuthProvider] = None
