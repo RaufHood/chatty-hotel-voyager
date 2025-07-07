@@ -86,6 +86,11 @@ const Chat = () => {
 
       const response = await apiService.chat(request);
       
+      // DEBUG: Log the API response
+      console.log("🔍 API Response:", response);
+      console.log("🔍 Hotel Data:", response.hotel_data);
+      console.log("🔍 Hotel Data Length:", response.hotel_data?.length);
+      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: response.reply || "I'm sorry, I couldn't process your request right now.",
@@ -95,6 +100,10 @@ const Chat = () => {
         selectedHotel: response.selected_hotel || undefined,
         autoPlayTTS: autoPlayTTS,
       };
+      
+      // DEBUG: Log the message that will be added
+      console.log("🔍 Assistant Message:", assistantMessage);
+      console.log("🔍 Assistant HotelData:", assistantMessage.hotelData);
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
@@ -230,12 +239,22 @@ const Chat = () => {
               <ChatMessage message={message} />
               {/* Show hotel results if the message has hotel data */}
               {message.role === "assistant" && message.hotelData && message.hotelData.length > 0 && (
-                <div className="mt-4 flex justify-start">
-                  <div className="bg-white rounded-2xl p-4 max-w-full shadow-sm">
-                    <HotelResults hotels={message.hotelData} />
-                  </div>
-                </div>
+                (() => {
+                  console.log("🔍 RENDERING HOTEL CARDS:", message.hotelData);
+                  return (
+                    <div className="mt-4 flex justify-start">
+                      <div className="bg-white rounded-2xl p-4 max-w-full shadow-sm">
+                        <HotelResults hotels={message.hotelData} />
+                      </div>
+                    </div>
+                  );
+                })()
               )}
+              {/* DEBUG: Log all assistant messages to see their data */}
+              {message.role === "assistant" && (() => {
+                console.log(`🔍 Message ${message.id}: hotelData=${!!message.hotelData}, length=${message.hotelData?.length}`);
+                return null;
+              })()}
             </div>
           ))}
           
