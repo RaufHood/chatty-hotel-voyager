@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, MapPin, Star, MessageCircle, Plane } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,15 +7,38 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const Trips = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [flights, setFlights] = useState<any[]>([]);
+  const [hotelBookings, setHotelBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       fetchFlights();
     }
+    loadHotelBookings();
   }, [user]);
+
+  // Reload bookings when returning from payment page
+  useEffect(() => {
+    if (location.state?.message) {
+      loadHotelBookings();
+      // Clear the state message after showing it
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+
+  const loadHotelBookings = () => {
+    try {
+      const savedBookings = localStorage.getItem('hotelBookings');
+      if (savedBookings) {
+        setHotelBookings(JSON.parse(savedBookings));
+      }
+    } catch (error) {
+      console.error('Error loading hotel bookings:', error);
+    }
+  };
 
   const fetchFlights = async () => {
     try {
@@ -33,20 +56,12 @@ const Trips = () => {
     }
   };
 
-  // Mock trips data (keeping existing hotel data)
-  const trips = [
-    {
-      id: "1",
-      hotelName: "The Circus Hostel",
-      location: "Berlin, Germany",
-      checkIn: "Dec 15, 2024",
-      checkOut: "Dec 17, 2024",
-      status: "Confirmed",
-      price: 56,
-      type: "hotel",
-      image: "https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=400&h=300&fit=crop"
-    }
-  ];
+  // Helper to get full image URL
+  const getImageUrl = (img: string) => {
+    if (!img) return "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop";
+    if (img.startsWith("http")) return img;
+    return `https://photos.hotelbeds.com/giata/${img}`;
+  };
 
   const watchedSearches = [
     {
@@ -87,39 +102,47 @@ const Trips = () => {
         {/* Upcoming Hotels */}
         <div>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Hotels</h2>
-          {trips.length > 0 ? (
+          {hotelBookings.length > 0 ? (
             <div className="space-y-3">
-              {trips.map((trip) => (
-                <div key={trip.id} className="bg-white rounded-xl border border-gray-200 p-4">
-                  <div className="flex">
-                    <div className="w-16 h-12 flex-shrink-0 rounded-lg overflow-hidden">
-                      <img
-                        src={trip.image}
-                        alt={trip.hotelName}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 ml-3">
-                      <div className="flex justify-between items-start mb-1">
-                        <h3 className="font-semibold text-gray-900 text-sm">{trip.hotelName}</h3>
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                          {trip.status}
-                        </span>
+              {hotelBookings.map((trip) => (
+                                  <div key={trip.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex">
+                      <div className="w-16 h-12 flex-shrink-0 rounded-lg overflow-hidden">
+                        <img
+                          src={getImageUrl(trip.image)}
+                          alt={trip.hotelName}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-                      <div className="flex items-center text-xs text-gray-600 mb-2">
-                        <MapPin className="w-3 h-3 mr-1" />
-                        <span>{trip.location}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center text-xs text-gray-600">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          <span>{trip.checkIn} - {trip.checkOut}</span>
+                      <div className="flex-1 ml-3">
+                        <div className="flex justify-between items-start mb-1">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 text-sm">{trip.hotelName}</h3>
+                            {trip.rating && (
+                              <div className="flex items-center mt-1">
+                                <Star className="w-3 h-3 text-yellow-400 fill-current mr-1" />
+                                <span className="text-xs font-medium">{trip.rating}</span>
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                            {trip.status}
+                          </span>
                         </div>
-                        <span className="text-sm font-semibold text-primary">€{trip.price}</span>
+                        <div className="flex items-center text-xs text-gray-600 mb-2">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          <span>{trip.location}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center text-xs text-gray-600">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            <span>{trip.checkIn} - {trip.checkOut}</span>
+                          </div>
+                          <span className="text-sm font-semibold text-primary">{trip.currency || '€'}{trip.price}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
               ))}
             </div>
           ) : (

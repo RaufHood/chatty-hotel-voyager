@@ -34,8 +34,32 @@ const Pay = () => {
     // Simulate payment processing
     setTimeout(() => {
       setProcessing(false);
-      // Clear booking data from localStorage
+      
+      // Save the booking to localStorage
+      if (bookingData) {
+        const existingBookings = JSON.parse(localStorage.getItem('hotelBookings') || '[]');
+        const newBooking = {
+          id: Date.now().toString(), // Simple ID generation
+          hotelName: bookingData.title,
+          location: bookingData.details,
+          checkIn: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          checkOut: new Date(Date.now() + 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), // Next day
+          status: "Confirmed",
+          price: bookingData.price,
+          currency: bookingData.currency,
+          type: "hotel",
+          image: bookingData.image,
+          rating: bookingData.rating,
+          bookedAt: new Date().toISOString()
+        };
+        
+        const updatedBookings = [newBooking, ...existingBookings];
+        localStorage.setItem('hotelBookings', JSON.stringify(updatedBookings));
+      }
+      
+      // Clear temporary booking data from localStorage
       localStorage.removeItem('bookingData');
+      
       // Navigate to success page or trips
       navigate('/trips', { 
         state: { 
