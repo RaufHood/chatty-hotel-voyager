@@ -4,9 +4,8 @@ import os
 
 
 class Settings(BaseSettings):
-    app_name: str = None
+    app_name: str = "Chatty-hotel-voyager"
     enable_celery: bool = "y" == "y"
-    database_url: str = None
     
     # Snowflake Database Settings
     snowflake_account: Optional[str] = None
