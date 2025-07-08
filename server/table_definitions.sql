@@ -20,8 +20,10 @@ create or replace TABLE CHATTY_HOTEL_VOYAGER.DBO.TRIPS (
     DATE_START TIMESTAMP_NTZ(9),
     DATE_END TIMESTAMP_NTZ(9),
     TRIP_STATUS VARCHAR(30), --past, in progress, upcoming 
+    HOTEL_ID NUMBER(38,0), 
     primary key (TRIP_ID),
-    foreign key (USER_ID) references CHATTY_HOTEL_VOYAGER.DBO.USERS(USER_ID)
+    foreign key (USER_ID) references CHATTY_HOTEL_VOYAGER.DBO.USERS(USER_ID),
+    foreign key (HOTEL_ID) references CHATTY_HOTEL_VOYAGER.DBO.HOTELS(HOTEL_ID)
 );
 
 create or replace TABLE CHATTY_HOTEL_VOYAGER.DBO.TRIP_LEGS (
