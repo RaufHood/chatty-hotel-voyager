@@ -35,5 +35,9 @@ class ChatHistoryResponse(BaseModel):
 
 class ClearChatRequest(BaseModel):
     """Request to clear chat history"""
+<<<<<<< Updated upstream
     session_id: str
     user_id: Optional[str] = None 
+=======
+    session_id: str 
+>>>>>>> Stashed changes

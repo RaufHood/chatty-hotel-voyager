@@ -1,5 +1,9 @@
+<<<<<<< Updated upstream
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
+=======
+from fastapi import APIRouter, HTTPException
+>>>>>>> Stashed changes
 from app.schemas.chat import (
     ChatRequest, 
     ChatResponse, 
@@ -8,8 +12,11 @@ from app.schemas.chat import (
     ClearChatRequest
 )
 from app.services.chat_service import chat_service
+<<<<<<< Updated upstream
 from app.services.auth_deps import get_current_user
 from app.schemas.auth import User
+=======
+>>>>>>> Stashed changes
 import logging
 
 logger = logging.getLogger(__name__)

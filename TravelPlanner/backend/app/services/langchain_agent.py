@@ -3,8 +3,13 @@ from langchain.agents import initialize_agent, AgentType
 from langchain import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.schema import BaseMessage
+<<<<<<< Updated upstream
 from app.services.lc_tools import hotel_search_tool, hotel_select_tool
 from langchain_community.chat_models import ChatGroq
+=======
+from app.services import lc_tools
+from langchain_groq import ChatGroq
+>>>>>>> Stashed changes
 from app.core.settings import settings
 from typing import List, Dict, Optional
 import logging
@@ -18,10 +23,16 @@ llm = ChatGroq(
     temperature=0.3,
 )
 
-TOOLS = [hotel_search_tool, hotel_select_tool]
+TOOLS = [lc_tools.hotel_select_tool, 
+         lc_tools.hotel_cheapest_tool, lc_tools.hotel_cxl_policy_tool, 
+         lc_tools.hotel_highest_rated_tool]
 
 SYSTEM_PROMPT = """You are TripPlanner, a professional travel agent.
+<<<<<<< Updated upstream
 When needed, call hotel_search or choose_hotel tools to recommend hotels. Prioritize the user's budget and hotel rating"""
+=======
+When needed, call tools from the available list of tools to recommend hotels. Prioritize the user's requirements and always show the top 5 hotels based on those criteria, until specified otherwise."""
+>>>>>>> Stashed changes
 
 # Simple conversation memory for the chat agent
 vector_memory = ConversationBufferMemory(
@@ -73,7 +84,7 @@ def create_agent_with_memory(session_id: str):
     agent = initialize_agent(
         TOOLS,
         llm,
-        agent=AgentType.OPENAI_FUNCTIONS,
+        agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
         memory=session_memory,
         verbose=True,
     )

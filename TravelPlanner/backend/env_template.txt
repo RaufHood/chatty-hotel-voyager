@@ -1,0 +1,15 @@
+# Snowflake Database Settings
+# Replace with your actual Snowflake credentials
+SNOWFLAKE_ACCOUNT=your_account_identifier
+SNOWFLAKE_USER=your_username
+SNOWFLAKE_PASSWORD=your_password
+SNOWFLAKE_WAREHOUSE=your_warehouse_name
+SNOWFLAKE_DATABASE=your_database_name
+SNOWFLAKE_SCHEMA=your_schema_name
+SNOWFLAKE_ROLE=your_role_name
+
+# AI/LLM Settings
+GROQ_API_KEY=your_groq_api_key_here
+
+# Frontend URL
+FRONTEND_URL=http://localhost:3000 
