@@ -71,3 +71,26 @@ async def chat_health():
     Health check endpoint for the chat service.
     """
     return {"status": "healthy", "service": "chat"}
+    
+
+@router.post("/tts")
+async def text_to_speech(payload: TTSPayload):
+    try:
+        text = payload.dict()['text']
+        output = tts(text)
+        buffer = BytesIO(output)
+        return StreamingResponse(buffer, media_type="application/octet-stream")
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=400, detail=str(e))
+        
+@router.post("/stt")
+async def speect_to_text(payload: UploadFile = File(...)):
+    try:
+        audio = await payload.read()
+        output = stt(audio)
+        return {"voice": output}
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=400, detail=str(e))
+
