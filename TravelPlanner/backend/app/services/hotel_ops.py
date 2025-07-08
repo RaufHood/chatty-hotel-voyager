@@ -14,7 +14,6 @@ from collections import defaultdict
 from operator import itemgetter
 
 logger = logging.getLogger(__name__)
-
     # async‑aware LRU cache  🡅
 
 API_KEY    = settings.hotelbeds_api_key
@@ -65,21 +64,45 @@ async def availability(dest: str, cin: str, cout: str,
     return data
 
 
-async def _flatten_rates(raw: dict):
+async def _flatten_rates(raw: dict | str) -> List[Dict]:
+    """
+    Parse and flatten rates from a Hotelbeds Availability response.
+    Handles raw JSON string or already-parsed dict.
+    Returns a list of rate objects with hotelCode included.
+    """
+    # 1. Parse raw if it's a JSON string
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON input: {e}")
+
     if not isinstance(raw, dict):
-        print(f"Expected dict, got {type(raw)}: {raw}")
-        raise ValueError("Expected a dict as input to _flatten_rates")
-    out = []
-    for h in raw.get("hotels", []):
-        for room in h.get("rooms", []):
+        raise ValueError(f"Expected dict or JSON string, got {type(raw)}")
+
+    # 2. Navigate into nested `hotels.hotels` if necessary
+    hotels_container = raw.get("hotels", {})
+    hotels_list = hotels_container.get("hotels") if isinstance(hotels_container, dict) else hotels_container
+
+    if not isinstance(hotels_list, list):
+        raise ValueError("Expected a list of hotels in raw['hotels']['hotels']")
+
+    # 3. Flatten rates
+    flattened: List[Dict] = []
+    for hotel in hotels_list:
+        hotel_code = hotel.get("code")
+        for room in hotel.get("rooms", []):
             for rate in room.get("rates", []):
-                rate["hotelCode"] = h["code"]
-                out.append(rate)
-    return out
+                # attach hotel code to each rate
+                rate["hotelCode"] = hotel_code
+                flattened.append(rate)
+
+    return flattened
 
 @alru_cache(maxsize=1024, ttl=60*60)                         # 1‑hour TTL
 async def hotel_static(*codes: Tuple[str, ...]) -> Dict[str, dict]:
-    query = ",".join(codes)
+    codes_str = [str(c) for c in codes]
+    query = ",".join(codes_str)
     async with _LIMIT:
         r = await (await _client()).get(
             "/hotel-content-api/1.0/hotels",
@@ -101,9 +124,11 @@ async def hotels_highest_rating(dest, cin, cout, top_n=5):
     flat   = await _flatten_rates(await availability(dest, cin, cout))
     codes  = tuple({r["hotelCode"] for r in flat})
     static = await hotel_static(*codes)
-    rated  = sorted(static.values(),
-                    key=lambda h: int(h["category"]["simpleCode"]), reverse=True)
-    return rated[:top_n]
+    def get_rating(h):
+        cat = h.get("category")
+        return int(cat["simpleCode"]) if isinstance(cat, dict) and "simpleCode" in cat else 0
+    rated_list = sorted(static.values(), key=get_rating, reverse=True)
+    return rated_list[:top_n]
 
 async def hotels_with_cxl_policy(dest: str, cin: str, cout: str,
                             policy: Literal["NRF", "FREE", "BEFORE_DATE"],
@@ -133,4 +158,3 @@ async def hotels_best_promo_board(dest: str, cin: str, cout: str,
                       reverse=True)
     return scored[:top_n]
 
-print(_signature())

@@ -1,4 +1,5 @@
 from langchain.tools import StructuredTool
+from langchain.callbacks.base import BaseCallbackHandler
 from pydantic import BaseModel, Field
 from typing import Any, Literal, Optional
 from app.services import hotel_ops
@@ -13,7 +14,7 @@ hotel_search_tool = Tool(
 '''
 class SelectHotelIsInput(BaseModel):
     hotels: list[dict] = Field(..., description="List of hotels from which best hotel is to be selected")
-    budget: int = Field(..., description="Budget for the booking")
+    budget: Optional[int] = Field(..., description="Budget for the booking")
 
 async def select_best_hotel(hotels: list[dict], budget: int | None = None) -> dict[str, Any]:
     """Pick best hotel using budget & rating heuristics."""
@@ -72,3 +73,14 @@ hotel_cxl_policy_tool = StructuredTool.from_function(
     args_schema=HotelsWithCxlPolicyInput
 )
 
+##------------tool tracker--------------
+class ToolTracker(BaseCallbackHandler):
+    def __init__(self):
+        self.tools_used = []
+    
+    def on_tool_start(self, serialized, input_str, **kwargs):
+        name = serialized.get("name")
+        self.tools_used.append({
+            "tool_name": name,
+            "input": input_str,
+        })

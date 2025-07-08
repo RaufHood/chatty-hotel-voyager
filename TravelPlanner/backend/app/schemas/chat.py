@@ -33,4 +33,11 @@ class ChatHistoryResponse(BaseModel):
 
 class ClearChatRequest(BaseModel):
     """Request to clear chat history"""
+<<<<<<< Updated upstream
     session_id: str 
+=======
+    session_id: str 
+
+class TTSPayload(BaseModel):
+    text: str
+>>>>>>> Stashed changes

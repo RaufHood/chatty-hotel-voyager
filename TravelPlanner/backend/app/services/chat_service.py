@@ -4,7 +4,10 @@ from datetime import datetime
 from langchain.schema import HumanMessage, AIMessage
 from app.services.langchain_agent import chat_memory, get_agent
 from app.schemas.chat import ChatMessage, ChatResponse
-import logging
+from app.services.lc_tools import ToolTracker
+import logging  
+import json
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +17,21 @@ class ChatService:
     def __init__(self):
         self.default_agent = get_agent()
     
+    def extract_json_from_text(text: str):
+        """
+            Extracts the first JSON object from a string.
+            Returns the parsed JSON as a dict, or raises ValueError if not found.
+        """
+        # This regex finds the first {...} block in the text
+        match = re.search(r'\{(?:[^{}]|(?R))*\}', text, re.DOTALL)
+        if not match:
+            raise ValueError("No JSON object found in text")
+        json_str = match.group(0)
+        try:
+            return json.loads(json_str)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Found JSON block but failed to parse: {e}")
+        
     async def process_message(
         self, 
         message: str, 
@@ -43,11 +61,15 @@ class ChatService:
             
             # Run the agent with the message
             result = await agent.arun(message)
-            logger.info(f"Agent result:{result!r}")
+            
             # Create AI message
             ai_msg = AIMessage(content=result)
             chat_memory.add_message(session_id, ai_msg)
             
+            try:
+                ai_action_block = self.extract_json_from_text(result)
+            except ValueError as e:
+                ai_msg = AIMessage(content=f"Error extracting JSON: {e}")
             # Extract tool usage information if available
             tools_used = []
             hotel_data = []
@@ -56,12 +78,11 @@ class ChatService:
             # Try to extract information from the agent's execution
             # This is a simplified approach - in a real implementation,
             # you might want to capture tool execution details more precisely
-            if "hotel" in message.lower() or "hotel" in result.lower():
-                tools_used.append("hotel_search")
+            
             
             # Create response
             response = ChatResponse(
-                reply=result,
+                reply=ai_action_block,
                 session_id=session_id,
                 tools_used=tools_used if tools_used else None,
                 hotel_data=hotel_data,

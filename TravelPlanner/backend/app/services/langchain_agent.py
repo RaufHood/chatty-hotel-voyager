@@ -22,8 +22,9 @@ TOOLS = [lc_tools.hotel_select_tool,
          lc_tools.hotel_highest_rated_tool]
 
 SYSTEM_PROMPT = """You are TripPlanner, a professional travel agent.
-When needed, call tools from the available list of tools to recommend hotels. Prioritize the user's requirements and always show the top 5 hotels based on those criteria, until specified otherwise."""
+When needed, call tools from the available list of tools to recommend hotels. Prioritize the user's requirements, if mentioned, else return the entire response. For every action you do, always return ONLY the structured JSON/action block response, not any natural language text."""
 
+TOOL_TRACKER = lc_tools.ToolTracker()
 # Simple conversation memory for the chat agent
 vector_memory = ConversationBufferMemory(
     memory_key="chat_history",
@@ -76,6 +77,7 @@ def create_agent_with_memory(session_id: str):
         llm,
         agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
         memory=session_memory,
+        callbacks=[TOOL_TRACKER],
         verbose=True,
     )
     
