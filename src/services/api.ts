@@ -16,12 +16,23 @@ export interface ChatResponse {
 
 export interface Hotel {
   id: string;
-  name: string;
+  name: {
+    content: string;
+  } | string;
   location: string;
   price: number;
+  originalPrice?: number;
   rating: number;
-  image: string;
-  amenities: string[];
+  reviews?: number;
+  images?: string[];
+  image?: string;
+  type?: string;
+  category?: string;
+  currency?: string;
+  amenities?: Array<{
+    icon: string;
+    label: string;
+  }> | string[];
   description: string;
 }
 
@@ -149,9 +160,16 @@ class ApiService {
     }
   }
 
-  async getHotelDetails(hotelId: string): Promise<Hotel | null> {
+  async getHotelDetails(hotelId: string, checkIn?: string, checkOut?: string): Promise<Hotel | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/hotels/${hotelId}`);
+      let url = `${this.baseUrl}/api/hotel/${hotelId}`;
+      
+      // Add date parameters if provided
+      if (checkIn && checkOut) {
+        url += `?check_in=${checkIn}&check_out=${checkOut}`;
+      }
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

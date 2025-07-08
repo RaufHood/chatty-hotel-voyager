@@ -4,35 +4,29 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, CreditCard, Lock, Hotel, Plane } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, CreditCard, Lock, Hotel, Plane, Star } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 const Pay = () => {
   const { ref } = useParams();
   const navigate = useNavigate();
   const [processing, setProcessing] = useState(false);
+  const [bookingData, setBookingData] = useState(null);
 
-  // Determine if it's a flight or hotel booking
-  const isFlightBooking = ref?.startsWith('flight-');
-  const bookingType = isFlightBooking ? 'flight' : 'hotel';
-  const bookingId = ref?.replace('flight-', '').replace('hotel-', '') || ref;
-
-  // Mock booking data
-  const bookingData = isFlightBooking ? {
-    type: 'Flight',
-    title: 'Air France AF 1234',
-    details: 'Paris CDG → London LHR',
-    date: 'July 15, 2024',
-    price: 156,
-    icon: Plane
-  } : {
-    type: 'Hotel',
-    title: 'The Circus Hostel',
-    details: 'Berlin, Germany',
-    date: 'Dec 15-17, 2024',
-    price: 112,
-    icon: Hotel
-  };
+  // Get booking data from localStorage - REAL DATA ONLY
+  useEffect(() => {
+    const storedData = localStorage.getItem('bookingData');
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      setBookingData({
+        ...parsedData,
+        icon: parsedData.type === 'flight' ? Plane : Hotel
+      });
+    } else {
+      // No fallback - redirect back if no data
+      navigate(-1);
+    }
+  }, [ref, navigate]);
 
   const handlePayment = async () => {
     setProcessing(true);
@@ -40,14 +34,28 @@ const Pay = () => {
     // Simulate payment processing
     setTimeout(() => {
       setProcessing(false);
+      // Clear booking data from localStorage
+      localStorage.removeItem('bookingData');
       // Navigate to success page or trips
       navigate('/trips', { 
         state: { 
-          message: `Your ${bookingData.type.toLowerCase()} has been booked successfully!` 
+          message: `Your ${bookingData?.type?.toLowerCase()} has been booked successfully!` 
         }
       });
     }, 2000);
   };
+
+  // Show loading if booking data is not yet loaded
+  if (!bookingData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading booking details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -79,17 +87,56 @@ const Pay = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="font-medium">{bookingData.title}</span>
+              {/* Hotel Image (if available) */}
+              {bookingData.image && bookingData.type === 'Hotel' && (
+                <div className="w-full h-32 rounded-lg overflow-hidden">
+                  <img
+                    src={bookingData.image.startsWith('http') ? bookingData.image : `https://photos.hotelbeds.com/giata/${bookingData.image}`}
+                    alt={bookingData.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <span className="font-medium text-lg">{bookingData.title}</span>
+                  {bookingData.rating && bookingData.type === 'Hotel' && (
+                    <div className="flex items-center mt-1">
+                      <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
+                      <span className="text-sm font-medium">{bookingData.rating}</span>
+                    </div>
+                  )}
+                </div>
                 <span className="text-sm text-gray-600">{bookingData.details}</span>
               </div>
+              
               <div className="flex justify-between">
                 <span className="text-gray-600">Date</span>
                 <span>{bookingData.date}</span>
               </div>
+              
+              {/* Price breakdown */}
+              <div className="space-y-2 pt-2 border-t">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Room rate</span>
+                  <span>{bookingData.currency}{bookingData.price}</span>
+                </div>
+                {bookingData.originalPrice && bookingData.originalPrice > bookingData.price && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Original price</span>
+                    <span className="text-gray-500 line-through">{bookingData.currency}{bookingData.originalPrice}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Taxes & fees</span>
+                  <span>Included</span>
+                </div>
+              </div>
+              
               <div className="flex justify-between items-center pt-3 border-t">
-                <span className="font-semibold">Total</span>
-                <span className="text-xl font-bold text-primary">€{bookingData.price}</span>
+                <span className="font-semibold text-lg">Total</span>
+                <span className="text-xl font-bold text-primary">{bookingData.currency}{bookingData.price}</span>
               </div>
             </div>
           </CardContent>
@@ -164,7 +211,7 @@ const Pay = () => {
                 ) : (
                   <>
                     <Lock className="w-4 h-4 mr-2" />
-                    Pay €{bookingData.price}
+                    Pay {bookingData.currency}{bookingData.price}
                   </>
                 )}
               </Button>

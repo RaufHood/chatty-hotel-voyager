@@ -82,9 +82,13 @@ def select_best_hotel_sync(input_str: str) -> str:
             except:
                 pass
         
-        # Default budget if none found
+        # No default budget - must be specified by user
         if not budget:
-            budget = 100
+            return json.dumps({
+                "error": "Budget must be specified",
+                "message": "Please specify a budget for your hotel search",
+                "hotel_tool_used": True
+            }, indent=2)
         
         # If no hotels data provided, return error message
         if not hotels_data:
@@ -196,9 +200,9 @@ def search_and_select_hotels_sync(input_str: str) -> str:
         city = params.get('city', '')
         check_in = params.get('check_in', '')
         check_out = params.get('check_out', '')
-        budget = int(params.get('budget', 100))
+        budget = int(params.get('budget', 0))  # No default budget - must be specified
         
-        if not all([city, check_in, check_out]):
+        if not all([city, check_in, check_out, budget > 0]):
             return "Error: Missing required parameters. Use format: city=Barcelona,check_in=2025-07-08,check_out=2025-07-09,budget=100"
         
         # Search for hotels
@@ -239,7 +243,7 @@ def search_and_select_hotels_sync(input_str: str) -> str:
                     "rating": hotel.get('rating', 0),
                     "image": _get_hotel_image(hotel.get('category', '')),
                     "type": _transform_category_to_type(hotel.get('category', 'Standard')),
-                    "amenities": hotel.get('amenities', ['Wi-Fi', 'Air Conditioning', 'Room Service'])
+                    "amenities": hotel.get('amenities', [])
                 })
             
             # Store globally for chat service
@@ -273,7 +277,7 @@ def search_and_select_hotels_sync(input_str: str) -> str:
                 "rating": hotel.get('rating', 0),
                 "image": _get_hotel_image(hotel.get('category', '')),
                 "type": _transform_category_to_type(hotel.get('category', 'Standard')),
-                "amenities": hotel.get('amenities', ['Wi-Fi', 'Air Conditioning', 'Room Service'])
+                                    "amenities": hotel.get('amenities', [])
             })
         
         # Store globally for chat service

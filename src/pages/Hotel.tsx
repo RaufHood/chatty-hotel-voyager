@@ -4,12 +4,30 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Star, MapPin, Wifi, Car, Coffee, Shield } from "lucide-react";
 import { apiService } from "@/services/api";
 
+const getAmenityIcon = (iconName: string) => {
+  switch (iconName?.toLowerCase()) {
+    case 'wifi':
+      return Wifi;
+    case 'car':
+      return Car;
+    case 'coffee':
+      return Coffee;
+    case 'shield':
+      return Shield;
+    default:
+      return Star;
+  }
+};
+
+const HOTELBEDS_IMAGE_BASE = "https://photos.hotelbeds.com/giata/";
+
 const Hotel = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [hotel, setHotel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentImage, setCurrentImage] = useState(0);
 
   useEffect(() => {
     const fetchHotelDetails = async () => {
@@ -20,7 +38,16 @@ const Hotel = () => {
           throw new Error('Hotel ID is required');
         }
 
-        const data = await apiService.getHotelDetails(id);
+        // Use default dates (next week) to get real prices
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        const nextWeekPlusOne = new Date(nextWeek);
+        nextWeekPlusOne.setDate(nextWeekPlusOne.getDate() + 1);
+        
+        const checkIn = nextWeek.toISOString().split('T')[0];
+        const checkOut = nextWeekPlusOne.toISOString().split('T')[0];
+        
+        const data = await apiService.getHotelDetails(id, checkIn, checkOut);
         
         if (!data) {
           throw new Error('Hotel not found');
@@ -69,7 +96,27 @@ const Hotel = () => {
   }
 
   const handleBookNow = () => {
+    // Store hotel data in localStorage for payment page
+    localStorage.setItem('bookingData', JSON.stringify({
+      type: 'hotel',
+      id: hotel.id,
+      title: hotel.name?.content || hotel.name,
+      details: hotel.location,
+      date: 'Check-in: Today',
+      price: hotel.price,
+      currency: hotel.currency || '€',
+      originalPrice: hotel.originalPrice,
+      rating: hotel.rating,
+      image: hotel.images?.[0]
+    }));
     navigate(`/pay/${hotel.id}`);
+  };
+
+  // Helper to get full image URL
+  const getImageUrl = (img: string) => {
+    if (!img) return "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop";
+    if (img.startsWith("http")) return img;
+    return `${HOTELBEDS_IMAGE_BASE}${img}`;
   };
 
   return (
@@ -85,31 +132,50 @@ const Hotel = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-lg font-semibold truncate">{hotel.name}</h1>
+          <h1 className="text-lg font-semibold truncate">{hotel.name?.content || hotel.name}</h1>
         </div>
       </div>
 
       {/* Image Carousel */}
       <div className="relative">
-        <div className="w-full h-64 overflow-hidden">
+        <div className="w-full h-64 overflow-hidden relative">
           <img
-            src={hotel.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop"}
-            alt={hotel.name}
+            src={getImageUrl(hotel.images?.[currentImage])}
+            alt={hotel.name?.content || hotel.name}
             className="w-full h-full object-cover"
           />
+          {/* Carousel Controls */}
+          {hotel.images && hotel.images.length > 1 && (
+            <>
+              <button
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 rounded-full p-1 shadow"
+                onClick={() => setCurrentImage((prev) => (prev === 0 ? hotel.images.length - 1 : prev - 1))}
+                aria-label="Previous image"
+              >
+                &#8592;
+              </button>
+              <button
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 rounded-full p-1 shadow"
+                onClick={() => setCurrentImage((prev) => (prev === hotel.images.length - 1 ? 0 : prev + 1))}
+                aria-label="Next image"
+              >
+                &#8594;
+              </button>
+            </>
+          )}
         </div>
         <div className="absolute bottom-4 right-4 bg-black/50 text-white px-2 py-1 rounded text-sm">
-          1 / {hotel.images?.length || 1}
+          {hotel.images ? currentImage + 1 : 1} / {hotel.images?.length || 1}
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-6 pb-32">
         {/* Basic Info */}
         <div>
           <div className="flex justify-between items-start mb-2">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">{hotel.name}</h2>
+              <h2 className="text-xl font-bold text-gray-900">{hotel.name?.content || hotel.name}</h2>
               <div className="flex items-center text-gray-600 mt-1">
                 <MapPin className="w-4 h-4 mr-1" />
                 <span className="text-sm">{hotel.location}</span>
@@ -147,12 +213,30 @@ const Hotel = () => {
         <div>
           <h3 className="font-semibold text-gray-900 mb-3">Amenities</h3>
           <div className="grid grid-cols-2 gap-3">
-            {hotel.amenities?.map((amenity, index) => (
-              <div key={index} className="flex items-center">
-                <amenity.icon className="w-5 h-5 text-gray-600 mr-2" />
-                <span className="text-sm text-gray-700">{amenity.label}</span>
-              </div>
-            )) || (
+            {hotel.amenities && hotel.amenities.length > 0 ? (
+              // Handle both string arrays and object arrays
+              hotel.amenities.map((amenity, index) => {
+                if (typeof amenity === 'string') {
+                  // If amenity is a string, create a simple display
+                  return (
+                    <div key={index} className="flex items-center">
+                      <Star className="w-5 h-5 text-gray-600 mr-2" />
+                      <span className="text-sm text-gray-700">{amenity}</span>
+                    </div>
+                  );
+                } else if (amenity && typeof amenity === 'object' && amenity.icon && amenity.label) {
+                  // If amenity is an object with icon and label
+                  const IconComponent = getAmenityIcon(amenity.icon);
+                  return (
+                    <div key={index} className="flex items-center">
+                      <IconComponent className="w-5 h-5 text-gray-600 mr-2" />
+                      <span className="text-sm text-gray-700">{amenity.label}</span>
+                    </div>
+                  );
+                }
+                return null;
+              })
+            ) : (
               // Default amenities if none provided
               <>
                 <div className="flex items-center">
@@ -177,13 +261,19 @@ const Hotel = () => {
         </div>
 
         {/* Price Breakdown */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mt-8">
           <h3 className="font-semibold text-gray-900 mb-3">Price breakdown</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600">Room rate</span>
               <span>{hotel.currency || '€'}{hotel.price}</span>
             </div>
+            {hotel.originalPrice && hotel.originalPrice > 0 && hotel.originalPrice > hotel.price && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Original price</span>
+                <span className="text-gray-500 line-through">{hotel.currency || '€'}{hotel.originalPrice}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-600">Taxes & fees</span>
               <span>Included</span>
@@ -194,13 +284,13 @@ const Hotel = () => {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Book Now Button */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-4">
-          <Button onClick={handleBookNow} className="w-full">
-            Book Now - {hotel.currency || '€'}{hotel.price}
-          </Button>
-        </div>
+      {/* Fixed Book Now Button */}
+      <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 p-4 z-20">
+        <Button onClick={handleBookNow} className="w-full">
+          Book Now - {hotel.currency || '€'}{hotel.price}
+        </Button>
       </div>
     </div>
   );
