@@ -1,36 +1,35 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 import logging
 
 from app.core.settings import settings
 from app.api.routers import chat, trip, hotel, pay
 from app.services.database import create_db_and_tables, close_database
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for database initialization and cleanup"""
+    # Startup
+    try:
+        create_db_and_tables()
+    except Exception as e:
+        logging.error(f"Failed to initialize database: {e}")
+    
+    yield
+    
+    # Shutdown
+    try:
+        close_database()
+    except Exception as e:
+        logging.error(f"Failed to close database: {e}")
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="TravelPlanner")
+    app = FastAPI(title="TravelPlanner", lifespan=lifespan)
 
     configure_cors(app)
     configure_router(app)
     configure_logging()
-    
-    # Database startup event
-    @app.on_event("startup")
-    async def startup_event():
-        """Initialize database on startup"""
-        try:
-            create_db_and_tables()
-        except Exception as e:
-            logging.error(f"Failed to initialize database: {e}")
-            # Continue running the app even if database fails
-    
-    # Database shutdown event
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        """Close database connection on shutdown"""
-        try:
-            close_database()
-        except Exception as e:
-            logging.error(f"Failed to close database: {e}")
     
     return app
 
@@ -44,7 +43,7 @@ def configure_cors(app: FastAPI):
     )
 
 def configure_router(app: FastAPI):
-    app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+    app.include_router(chat.router, tags=["chat"])
     app.include_router(trip.router, prefix="/api/trips", tags=["trips"])
     app.include_router(hotel.router, prefix="/api", tags=["hotels"])
     app.include_router(pay.router, prefix="/api", tags=["payments"])
@@ -58,8 +57,6 @@ def configure_logging():
         level=logging.INFO,
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     )
-
-# Create the app instance
 app = create_app()
 
 

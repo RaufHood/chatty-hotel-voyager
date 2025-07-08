@@ -1,8 +1,8 @@
 from langchain.agents import initialize_agent, AgentType
 from langchain_core.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
-from langchain_core.messages import BaseMessage
-from app.services.lc_tools import hotel_search_tool, hotel_select_tool
+from langchain.schema import BaseMessage
+from app.services import lc_tools
 from langchain_groq import ChatGroq
 from app.core.settings import settings
 from typing import List, Dict, Optional
@@ -17,19 +17,12 @@ llm = ChatGroq(
     temperature=0.3,
 )
 
-TOOLS = [hotel_search_tool, hotel_select_tool]
+TOOLS = [lc_tools.hotel_select_tool, 
+         lc_tools.hotel_cheapest_tool, lc_tools.hotel_cxl_policy_tool, 
+         lc_tools.hotel_highest_rated_tool]
 
-SYSTEM_PROMPT = """You are TripPlanner, a helpful travel assistant with access to a comprehensive traveling platform. You can suggest and help book flights and hotels using specialized search tools that find accommodations and flights based on specific criteria.
-
-When users ask about travel, gather key information through follow-up questions:
-- Destination city/country
-- Check-in and check-out dates (for hotels) 
-- Departure and arrival dates (for flights)
-- Budget range
-- Number of travelers
-- Specific preferences
-
-Use the hotel_search and choose_hotel tools when you have enough information. Provide friendly, enthusiastic responses in 2-3 sentences and prioritize the user's budget and preferences."""
+SYSTEM_PROMPT = """You are TripPlanner, a professional travel agent.
+When needed, call tools from the available list of tools to recommend hotels. Prioritize the user's requirements and always show the top 5 hotels based on those criteria, until specified otherwise."""
 
 # Simple conversation memory for the chat agent
 vector_memory = ConversationBufferMemory(
@@ -81,7 +74,7 @@ def create_agent_with_memory(session_id: str):
     agent = initialize_agent(
         TOOLS,
         llm,
-        agent=AgentType.OPENAI_FUNCTIONS,
+        agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
         memory=session_memory,
         verbose=True,
     )
