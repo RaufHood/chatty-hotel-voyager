@@ -412,8 +412,8 @@ const Chat = () => {
                   
                   // Parse search parameters from user message
                   let city = "Unknown Location";
-                  let checkIn = "2025-07-20";
-                  let checkOut = "2025-07-23";
+                  let checkIn = "2025-07-08"; // Default to today
+                  let checkOut = "2025-07-10"; // Default to 2 days later
                   let guests = 2;
                   
                   // Extract city
@@ -430,15 +430,35 @@ const Chat = () => {
                     city = 'Paris';
                   }
                   
-                  // Extract dates (looking for patterns like "20-23 july", "july 20-23", etc.)
-                  const dateMatch = searchText.match(/(\d{1,2})-(\d{1,2})\s*(july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i);
+                  // Extract dates (looking for patterns like "15-17july", "15-17 july", "july 15-17", etc.)
+                  const dateMatch = searchText.match(/(\d{1,2})-(\d{1,2})\s*(july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i) ||
+                                  searchText.match(/(july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s*(\d{1,2})-(\d{1,2})/i);
+                  
                   if (dateMatch) {
-                    const startDay = dateMatch[1];
-                    const endDay = dateMatch[2];
-                    const month = dateMatch[3].toLowerCase();
-                    const year = new Date().getFullYear() + (new Date().getMonth() > 6 ? 1 : 0); // Next year if past July
+                    let startDay, endDay, month;
+                    
+                    // Handle both "15-17july" and "july 15-17" formats
+                    if (dateMatch[3]) {
+                      // Format: "15-17july"
+                      startDay = dateMatch[1];
+                      endDay = dateMatch[2];
+                      month = dateMatch[3].toLowerCase();
+                    } else {
+                      // Format: "july 15-17"
+                      month = dateMatch[1].toLowerCase();
+                      startDay = dateMatch[2];
+                      endDay = dateMatch[3];
+                    }
+                    
+                    const year = 2025; // Use 2025 as specified in the logs
                     
                     const monthMap: { [key: string]: string } = {
+                      'january': '01', 'jan': '01',
+                      'february': '02', 'feb': '02',
+                      'march': '03', 'mar': '03',
+                      'april': '04', 'apr': '04',
+                      'may': '05',
+                      'june': '06', 'jun': '06',
                       'july': '07', 'jul': '07',
                       'august': '08', 'aug': '08',
                       'september': '09', 'sep': '09',
