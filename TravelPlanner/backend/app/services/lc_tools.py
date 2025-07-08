@@ -190,7 +190,7 @@ from app.services import hotel_ops
 _last_hotel_cards = None
 
 @tool
-def search_and_select_hotels(city: str, check_in: str, check_out: str, budget: int) -> str:
+def search_and_select_hotels(city: str, check_in: str, check_out: str, budget: int = None) -> str:
     """
     Search for hotels and select the top 3 based on budget in one step.
     
@@ -198,7 +198,7 @@ def search_and_select_hotels(city: str, check_in: str, check_out: str, budget: i
         city: City name (e.g., "Barcelona")
         check_in: Check-in date in YYYY-MM-DD format (e.g., "2025-07-29")
         check_out: Check-out date in YYYY-MM-DD format (e.g., "2025-07-30")
-        budget: Maximum budget per night in euros (e.g., 140)
+        budget: Maximum budget per night in euros (e.g., 140). Optional - if not provided, will ask user.
     
     Returns:
         JSON string of top 3 selected hotels from actual search results
@@ -206,8 +206,17 @@ def search_and_select_hotels(city: str, check_in: str, check_out: str, budget: i
     global _last_hotel_cards
     import asyncio
     try:
-        if not all([city, check_in, check_out, budget > 0]):
-            return "Error: Missing required parameters. Please provide city, check_in, check_out, and budget."
+        if not all([city, check_in, check_out]):
+            return "Error: Missing required parameters. Please provide city, check_in, and check_out."
+        
+        # If budget is not provided, ask for it
+        if budget is None or budget <= 0:
+            return json.dumps({
+                "error": "Budget required",
+                "message": f"To search for hotels in {city} from {check_in} to {check_out}, please specify your budget per night.",
+                "ask_for_budget": True,
+                "hotel_tool_used": True
+            }, indent=2)
         
         # Search for hotels
         loop = asyncio.new_event_loop()
