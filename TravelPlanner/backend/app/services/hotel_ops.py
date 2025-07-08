@@ -8,6 +8,7 @@ from typing import List, Dict, Any
 import logging
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+from fastapi import HTTPException
 
 # Load environment variables from .env file
 load_dotenv()
@@ -66,8 +67,7 @@ async def search_hotels(city: str, check_in: str, check_out: str) -> List[Dict[s
     try:
         # Check if we have API credentials
         if not HOTELBEDS_API_KEY or not HOTELBEDS_SECRET:
-            logger.warning("Hotelbeds API credentials not found, using mock data")
-            return await _get_mock_hotels(city, check_in, check_out)
+            raise ValueError("Hotelbeds API credentials not configured")
         
         # Ensure we're using future dates
         today = datetime.now()
@@ -160,49 +160,84 @@ async def search_hotels(city: str, check_in: str, check_out: str) -> List[Dict[s
                 
             else:
                 logger.error(f"Hotelbeds API error {response.status_code}: {response.text}")
-                return await _get_mock_hotels(city, check_in, check_out)
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Hotel search failed: {response.text}"
+                )
                 
+    except ValueError as ve:
+        logger.error(f"Configuration error: {ve}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Service configuration error: {str(ve)}"
+        )
     except Exception as e:
         logger.error(f"Error searching hotels: {e}")
-        return await _get_mock_hotels(city, check_in, check_out)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Hotel search failed: {str(e)}"
+        )
 
-async def _get_mock_hotels(city: str, check_in: str, check_out: str) -> List[Dict[str, Any]]:
-    """Return mock hotel data when API is unavailable"""
-    logger.info(f"Returning mock hotel data for {city}")
-    
-    base_hotels = [
-        {
-            "id": f"{city.lower()}-hotel-1",
-            "name": f"Hotel Europa {city}",
-            "category": "4 stars",
-            "location": f"City Center, {city}",
-            "rating": 4.2,
-            "price": 85.0,
-            "currency": "EUR",
-            "description": f"Modern 4-star hotel in the heart of {city} with excellent amenities."
-        },
-        {
-            "id": f"{city.lower()}-hotel-2", 
-            "name": f"Boutique {city} Inn",
-            "category": "3 stars",
-            "location": f"Historic District, {city}",
-            "rating": 3.8,
-            "price": 65.0,
-            "currency": "EUR",
-            "description": f"Charming boutique hotel in {city}'s historic district."
-        },
-        {
-            "id": f"{city.lower()}-hotel-3",
-            "name": f"Grand {city} Palace",
-            "category": "5 stars", 
-            "location": f"Premium Area, {city}",
-            "rating": 4.7,
-            "price": 150.0,
-            "currency": "EUR",
-            "description": f"Luxury 5-star hotel offering premium service in {city}."
+async def get_hotel_details(hotel_code: str) -> Dict[str, Any]:
+    """
+    Get detailed hotel information from Hotelbeds API by hotel code
+    """
+    try:
+        if not HOTELBEDS_API_KEY or not HOTELBEDS_SECRET:
+            raise ValueError("Hotelbeds API credentials not configured")
+        
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Api-key": HOTELBEDS_API_KEY,
+            "X-Signature": generate_signature(HOTELBEDS_API_KEY, HOTELBEDS_SECRET)
         }
-    ]
-    
-    return base_hotels
+        
+        # Get hotel details from Hotelbeds
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{HOTELBEDS_BASE_URL}/hotel-content-api/1.0/hotels/{hotel_code}",
+                headers=headers
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                hotel_data = data.get('hotel', {})
+                
+                return {
+                    "id": hotel_code,
+                    "name": hotel_data.get('name', f'Hotel {hotel_code}'),
+                    "location": hotel_data.get('city', {}).get('content', 'Unknown Location'),
+                    "price": 89,  # Price would come from availability search
+                    "originalPrice": 120,
+                    "rating": _parse_rating(hotel_data.get('categoryCode', '4')),
+                    "reviews": 1247,
+                    "images": [
+                        "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop",
+                        "https://images.unsplash.com/photo-1521783988139-89397d761dce?w=800&h=600&fit=crop",
+                        "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&h=600&fit=crop"
+                    ],
+                    "type": hotel_data.get('categoryName', '4 Star Hotel'),
+                    "description": hotel_data.get('description', {}).get('content', 'Modern hotel with excellent amenities'),
+                    "amenities": [
+                        {"icon": "Wifi", "label": "Free WiFi"},
+                        {"icon": "Coffee", "label": "Restaurant"},
+                        {"icon": "Car", "label": "Parking"},
+                        {"icon": "Shield", "label": "24/7 Security"}
+                    ]
+                }
+            else:
+                logger.error(f"Hotelbeds hotel details API error {response.status_code}: {response.text}")
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Hotel not found: {response.text}"
+                )
+                
+    except Exception as e:
+        logger.error(f"Error getting hotel details: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get hotel details: {str(e)}"
+        )
 
 

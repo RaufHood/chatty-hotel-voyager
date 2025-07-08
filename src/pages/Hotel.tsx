@@ -1,35 +1,72 @@
-
 import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Star, MapPin, Wifi, Car, Coffee, Shield } from "lucide-react";
+import { apiService } from "@/services/api";
 
 const Hotel = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [hotel, setHotel] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Mock hotel data - in real app this would come from API
-  const hotel = {
-    id: id,
-    name: "The Circus Hostel",
-    location: "Mitte, Berlin, Germany",
-    price: 28,
-    originalPrice: 35,
-    rating: 4.5,
-    reviews: 1247,
-    images: [
-      "https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=800&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1472396961693-142e6e269027?w=800&h=600&fit=crop"
-    ],
-    type: "Hostel",
-    description: "A vibrant hostel in the heart of Berlin with modern amenities and a great social atmosphere. Perfect for solo travelers and budget-conscious explorers.",
-    amenities: [
-      { icon: Wifi, label: "Free WiFi" },
-      { icon: Coffee, label: "Breakfast" },
-      { icon: Car, label: "Parking" },
-      { icon: Shield, label: "24/7 Security" }
-    ]
-  };
+  useEffect(() => {
+    const fetchHotelDetails = async () => {
+      try {
+        setLoading(true);
+        
+        if (!id) {
+          throw new Error('Hotel ID is required');
+        }
+
+        const data = await apiService.getHotelDetails(id);
+        
+        if (!data) {
+          throw new Error('Hotel not found');
+        }
+
+        setHotel(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching hotel details:', err);
+        setError(err.message || 'Failed to load hotel details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchHotelDetails();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading hotel details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !hotel) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error || 'Hotel not found'}</p>
+          <Button onClick={() => navigate(-1)} className="mr-2">
+            Go Back
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/chat')}>
+            Search Hotels
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleBookNow = () => {
     navigate(`/pay/${hotel.id}`);
@@ -56,13 +93,13 @@ const Hotel = () => {
       <div className="relative">
         <div className="w-full h-64 overflow-hidden">
           <img
-            src={hotel.images[0]}
+            src={hotel.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop"}
             alt={hotel.name}
             className="w-full h-full object-cover"
           />
         </div>
         <div className="absolute bottom-4 right-4 bg-black/50 text-white px-2 py-1 rounded text-sm">
-          1 / {hotel.images.length}
+          1 / {hotel.images?.length || 1}
         </div>
       </div>
 
@@ -80,9 +117,9 @@ const Hotel = () => {
             </div>
             <div className="text-right">
               <div className="flex items-baseline">
-                <span className="text-2xl font-bold text-primary">€{hotel.price}</span>
-                {hotel.originalPrice > hotel.price && (
-                  <span className="text-sm text-gray-500 line-through ml-2">€{hotel.originalPrice}</span>
+                <span className="text-2xl font-bold text-primary">{hotel.currency || '€'}{hotel.price}</span>
+                {hotel.originalPrice && hotel.originalPrice > hotel.price && (
+                  <span className="text-sm text-gray-500 line-through ml-2">{hotel.currency || '€'}{hotel.originalPrice}</span>
                 )}
               </div>
               <span className="text-sm text-gray-600">per night</span>
@@ -93,10 +130,10 @@ const Hotel = () => {
             <div className="flex items-center">
               <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
               <span className="font-medium">{hotel.rating}</span>
-              <span className="text-gray-600 text-sm ml-1">({hotel.reviews} reviews)</span>
+              <span className="text-gray-600 text-sm ml-1">({hotel.reviews || 0} reviews)</span>
             </div>
             <span className="mx-2 text-gray-400">•</span>
-            <span className="text-sm text-gray-600">{hotel.type}</span>
+            <span className="text-sm text-gray-600">{hotel.type || hotel.category}</span>
           </div>
         </div>
 
@@ -110,12 +147,32 @@ const Hotel = () => {
         <div>
           <h3 className="font-semibold text-gray-900 mb-3">Amenities</h3>
           <div className="grid grid-cols-2 gap-3">
-            {hotel.amenities.map((amenity, index) => (
+            {hotel.amenities?.map((amenity, index) => (
               <div key={index} className="flex items-center">
                 <amenity.icon className="w-5 h-5 text-gray-600 mr-2" />
                 <span className="text-sm text-gray-700">{amenity.label}</span>
               </div>
-            ))}
+            )) || (
+              // Default amenities if none provided
+              <>
+                <div className="flex items-center">
+                  <Wifi className="w-5 h-5 text-gray-600 mr-2" />
+                  <span className="text-sm text-gray-700">Free WiFi</span>
+                </div>
+                <div className="flex items-center">
+                  <Coffee className="w-5 h-5 text-gray-600 mr-2" />
+                  <span className="text-sm text-gray-700">Restaurant</span>
+                </div>
+                <div className="flex items-center">
+                  <Car className="w-5 h-5 text-gray-600 mr-2" />
+                  <span className="text-sm text-gray-700">Parking</span>
+                </div>
+                <div className="flex items-center">
+                  <Shield className="w-5 h-5 text-gray-600 mr-2" />
+                  <span className="text-sm text-gray-700">24/7 Security</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -124,41 +181,27 @@ const Hotel = () => {
           <h3 className="font-semibold text-gray-900 mb-3">Price breakdown</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span>Room rate</span>
-              <span>€{hotel.price}</span>
+              <span className="text-gray-600">Room rate</span>
+              <span>{hotel.currency || '€'}{hotel.price}</span>
             </div>
             <div className="flex justify-between">
-              <span>Taxes & fees</span>
-              <span>€0</span>
+              <span className="text-gray-600">Taxes & fees</span>
+              <span>Included</span>
             </div>
-            <div className="border-t pt-2 font-semibold flex justify-between">
+            <div className="border-t pt-2 flex justify-between font-semibold">
               <span>Total</span>
-              <span>€{hotel.price}</span>
+              <span>{hotel.currency || '€'}{hotel.price}</span>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Bottom Action Bar */}
-      <div className="floating-action w-full max-w-md">
-        <div className="bg-white border border-gray-200 rounded-2xl p-4 mx-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-lg font-bold text-primary">€{hotel.price}</div>
-              <div className="text-xs text-gray-500">total price</div>
-            </div>
-            <Button
-              onClick={handleBookNow}
-              className="bg-primary hover:bg-primary/90 px-8 py-3 rounded-xl"
-            >
-              Book Now
-            </Button>
-          </div>
+        {/* Book Now Button */}
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-4">
+          <Button onClick={handleBookNow} className="w-full">
+            Book Now - {hotel.currency || '€'}{hotel.price}
+          </Button>
         </div>
       </div>
-
-      {/* Spacer for floating action */}
-      <div className="h-24"></div>
     </div>
   );
 };

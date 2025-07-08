@@ -21,11 +21,19 @@ interface Hotel {
 interface HotelResultsProps {
   hotels?: Hotel[];
   title?: string;
+  city?: string;
+  checkIn?: string;
+  checkOut?: string;
+  guests?: number;
 }
 
 export const HotelResults: React.FC<HotelResultsProps> = ({ 
   hotels, 
-  title = "Top 3 Hotels for Paris" 
+  title,
+  city = "Paris",
+  checkIn = "2024-07-08",
+  checkOut = "2024-07-09", 
+  guests = 2
 }) => {
   const navigate = useNavigate();
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
@@ -68,6 +76,26 @@ export const HotelResults: React.FC<HotelResultsProps> = ({
 
   const displayHotels = hotels || defaultHotels;
 
+  // Generate dynamic title if not provided
+  const finalTitle = title || `Top 3 Hotels for ${city}`;
+  
+  // Calculate nights and format dates
+  const calculateNights = (checkIn: string, checkOut: string) => {
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+    const diffTime = checkOutDate.getTime() - checkInDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+  
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  
+  const nights = calculateNights(checkIn, checkOut);
+  const dateInfo = `${formatDate(checkIn)}-${formatDate(checkOut)}, ${new Date(checkIn).getFullYear()} • ${nights} night${nights !== 1 ? 's' : ''} • ${guests} guest${guests !== 1 ? 's' : ''}`;
+
   const toggleFavorite = (hotelId: string) => {
     setFavorites(prev => {
       const newFavorites = new Set(prev);
@@ -90,8 +118,8 @@ export const HotelResults: React.FC<HotelResultsProps> = ({
   return (
     <div className="w-full max-w-2xl">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-        <p className="text-sm text-gray-600">July 8-9, 2024 • 1 night • 2 guests</p>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">{finalTitle}</h3>
+        <p className="text-sm text-gray-600">{dateInfo}</p>
       </div>
       
       <div className="space-y-4">

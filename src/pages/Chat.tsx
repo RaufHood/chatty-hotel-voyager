@@ -241,10 +241,63 @@ const Chat = () => {
               {message.role === "assistant" && message.hotelData && message.hotelData.length > 0 && (
                 (() => {
                   console.log("🔍 RENDERING HOTEL CARDS:", message.hotelData);
+                  
+                  // Extract search context from the user's previous message
+                  const userMessage = messages[index - 1];
+                  const searchText = userMessage?.content?.toLowerCase() || "";
+                  
+                  // Parse search parameters from user message
+                  let city = "Unknown Location";
+                  let checkIn = "2025-07-20";
+                  let checkOut = "2025-07-23";
+                  let guests = 2;
+                  
+                  // Extract city
+                  const cityMatches = searchText.match(/(?:hotel|in|for)\s+([a-zA-Z\s]+?)(?:\s|$|max|budget|€|\d)/i);
+                  if (cityMatches) {
+                    city = cityMatches[1].trim().split(' ').map(word => 
+                      word.charAt(0).toUpperCase() + word.slice(1)
+                    ).join(' ');
+                  } else if (searchText.includes('barcelona')) {
+                    city = 'Barcelona';
+                  } else if (searchText.includes('madrid')) {
+                    city = 'Madrid';
+                  } else if (searchText.includes('paris')) {
+                    city = 'Paris';
+                  }
+                  
+                  // Extract dates (looking for patterns like "20-23 july", "july 20-23", etc.)
+                  const dateMatch = searchText.match(/(\d{1,2})-(\d{1,2})\s*(july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i);
+                  if (dateMatch) {
+                    const startDay = dateMatch[1];
+                    const endDay = dateMatch[2];
+                    const month = dateMatch[3].toLowerCase();
+                    const year = new Date().getFullYear() + (new Date().getMonth() > 6 ? 1 : 0); // Next year if past July
+                    
+                    const monthMap: { [key: string]: string } = {
+                      'july': '07', 'jul': '07',
+                      'august': '08', 'aug': '08',
+                      'september': '09', 'sep': '09',
+                      'october': '10', 'oct': '10',
+                      'november': '11', 'nov': '11',
+                      'december': '12', 'dec': '12'
+                    };
+                    
+                    const monthNum = monthMap[month] || '07';
+                    checkIn = `${year}-${monthNum}-${startDay.padStart(2, '0')}`;
+                    checkOut = `${year}-${monthNum}-${endDay.padStart(2, '0')}`;
+                  }
+                  
                   return (
                     <div className="mt-4 flex justify-start">
                       <div className="bg-white rounded-2xl p-4 max-w-full shadow-sm">
-                        <HotelResults hotels={message.hotelData} />
+                        <HotelResults 
+                          hotels={message.hotelData} 
+                          city={city}
+                          checkIn={checkIn}
+                          checkOut={checkOut}
+                          guests={guests}
+                        />
                       </div>
                     </div>
                   );

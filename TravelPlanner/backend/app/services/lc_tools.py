@@ -303,6 +303,81 @@ def get_last_hotel_cards():
     _last_hotel_cards = None  # Clear after retrieval
     return cards
 
+def get_hotel_details_sync(hotel_id: str) -> dict:
+    """Get detailed hotel information by ID - enhanced mock data based on hotel ID"""
+    try:
+        # Create realistic mock data based on hotel ID
+        if "barcelona" in hotel_id.lower():
+            name = "Hotel Barcelona Plaza"
+            location = "Plaza Catalunya, Barcelona, Spain"
+            price = 112
+            originalPrice = 135
+            description = "Elegant hotel in the heart of Barcelona, steps away from Plaza Catalunya and Gothic Quarter. Features modern amenities and traditional Catalan charm."
+        elif "madrid" in hotel_id.lower():
+            name = "Madrid Grand Hotel"
+            location = "Gran Via, Madrid, Spain"
+            price = 98
+            originalPrice = 120
+            description = "Luxury hotel on Gran Via with stunning city views. Perfect for exploring Madrid's cultural attractions and vibrant nightlife."
+        elif "paris" in hotel_id.lower():
+            name = "Paris Central Hotel"
+            location = "2nd Arrondissement, Paris, France"
+            price = 145
+            originalPrice = 170
+            description = "Charming Parisian hotel near the Louvre with classic French elegance and modern comfort."
+        else:
+            # Default hotel based on ID
+            name = f"Premium Hotel {hotel_id}"
+            location = "City Center"
+            price = 89
+            originalPrice = 120
+            description = "A luxurious hotel in the heart of the city with modern amenities and excellent service. Perfect for business travelers and tourists alike."
+        
+        hotel_details = {
+            "id": hotel_id,
+            "name": name,
+            "location": location,
+            "price": price,
+            "originalPrice": originalPrice,
+            "rating": 4.5,
+            "reviews": 1247,
+            "images": [
+                "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop",
+                "https://images.unsplash.com/photo-1521783988139-89397d761dce?w=800&h=600&fit=crop",
+                "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&h=600&fit=crop"
+            ],
+            "type": "4 Star Hotel",
+            "description": description,
+            "amenities": [
+                {"icon": "Wifi", "label": "Free WiFi"},
+                {"icon": "Coffee", "label": "Restaurant"},
+                {"icon": "Car", "label": "Parking"},
+                {"icon": "Shield", "label": "24/7 Security"},
+                {"icon": "Dumbbell", "label": "Fitness Center"},
+                {"icon": "Swimming", "label": "Pool"},
+                {"icon": "Concierge", "label": "Concierge Service"},
+                {"icon": "RoomService", "label": "Room Service"}
+            ],
+            "facilities": [
+                "Business Center",
+                "Conference Rooms", 
+                "Spa & Wellness",
+                "Airport Shuttle",
+                "Laundry Service",
+                "Pet Friendly"
+            ],
+            "policies": {
+                "checkIn": "15:00",
+                "checkOut": "11:00",
+                "cancellation": "Free cancellation up to 24 hours before check-in"
+            }
+        }
+        
+        return hotel_details
+        
+    except Exception as e:
+        return {"error": f"Failed to get hotel details: {str(e)}"}
+
 def _transform_category_to_type(category: str) -> str:
     """Transform hotel category to user-friendly type"""
     if "5 STARS" in category:
@@ -342,5 +417,12 @@ hotel_search_select_tool = Tool(
     func=search_and_select_hotels_sync,
 )
 
+# Hotel details tool
+hotel_details_tool = Tool(
+    name="get_hotel_details",
+    description="Get detailed hotel information by hotel ID. Input format: hotel_id",
+    func=get_hotel_details_sync,
+)
+
 # Export tools list for LangGraph agent - only include the working single-step tool
-TOOLS = [hotel_search_select_tool]
+TOOLS = [hotel_search_select_tool, hotel_details_tool]

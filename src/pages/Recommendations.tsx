@@ -4,15 +4,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Heart, Phone, MapPin, Star } from 'lucide-react';
+import { ArrowLeft, Heart, Phone, MapPin, Star, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { HotelRecommendations } from '@/components/HotelRecommendations';
+import { apiService } from '@/services/api';
 
 interface UserProfile {
   id: string;
   phone_number?: string;
+}
+
+interface Hotel {
+  id: string;
+  name: string;
+  location: string;
+  price: number;
+  rating: number;
+  image?: string;
+  type: string;
+  currency?: string;
 }
 
 const Recommendations = () => {
@@ -24,43 +35,21 @@ const Recommendations = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [hasPhoneNumber, setHasPhoneNumber] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // Mock hotel recommendations data (similar to what's shown in chat)
-  const recommendedHotels = [
-    {
-      id: "1",
-      name: "Le Meurice",
-      location: "1st Arrondissement, Paris",
-      price: 850,
-      rating: 4.8,
-      image: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=300&fit=crop",
-      type: "Luxury Hotel"
-    },
-    {
-      id: "2", 
-      name: "Hotel des Grands Boulevards",
-      location: "2nd Arrondissement, Paris",
-      price: 220,
-      rating: 4.5,
-      image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop",
-      type: "Boutique Hotel"
-    },
-    {
-      id: "3",
-      name: "Generator Paris",
-      location: "10th Arrondissement, Paris", 
-      price: 65,
-      rating: 4.2,
-      image: "https://images.unsplash.com/photo-1521783988139-89397d761dce?w=400&h=300&fit=crop",
-      type: "Modern Hostel"
-    }
-  ];
+  const [hotels, setHotels] = useState<Hotel[]>([]);
+  const [hotelsLoading, setHotelsLoading] = useState(false);
+  const [hotelsError, setHotelsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       checkUserProfile();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (hasPhoneNumber) {
+      fetchHotelRecommendations();
+    }
+  }, [hasPhoneNumber]);
 
   const checkUserProfile = async () => {
     try {
@@ -89,6 +78,39 @@ const Recommendations = () => {
       console.error('Error checking profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHotelRecommendations = async () => {
+    try {
+      setHotelsLoading(true);
+      setHotelsError(null);
+      
+      // Get recommendations from chat API by sending a general request
+      const response = await apiService.chat({
+        message: "Show me hotel recommendations for popular destinations",
+        session_id: `recommendations_${user?.id || 'anonymous'}`
+      });
+
+      if (response.hotel_data && response.hotel_data.length > 0) {
+        setHotels(response.hotel_data.map((hotel: any) => ({
+          id: hotel.id,
+          name: hotel.name,
+          location: hotel.location,
+          price: hotel.price,
+          rating: hotel.rating,
+          image: hotel.image || "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=300&fit=crop",
+          type: hotel.category || hotel.type || "Hotel",
+          currency: hotel.currency || "EUR"
+        })));
+      } else {
+        setHotelsError("No hotel recommendations available at this time.");
+      }
+    } catch (error) {
+      console.error('Error fetching hotel recommendations:', error);
+      setHotelsError("Failed to load hotel recommendations. Please try again.");
+    } finally {
+      setHotelsLoading(false);
     }
   };
 
@@ -137,6 +159,10 @@ const Recommendations = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleRetryRecommendations = () => {
+    fetchHotelRecommendations();
   };
 
   if (loading) {
@@ -217,52 +243,99 @@ const Recommendations = () => {
                 Recommended for You
               </h2>
               <p className="text-gray-600">
-                Based on your preferences, here are our top hotel picks in Paris
+                Based on your preferences, here are our top hotel picks
               </p>
             </div>
 
-            {/* Featured Recommendations */}
-            <div className="space-y-4">
-              {recommendedHotels.map((hotel) => (
-                <Card key={hotel.id} className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => navigate(`/hotel/${hotel.id}`)}>
-                  <CardContent className="p-0">
-                    <div className="flex">
-                      <div className="w-32 h-24 flex-shrink-0">
-                        <img
-                          src={hotel.image}
-                          alt={hotel.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-gray-900">{hotel.name}</h3>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-primary">€{hotel.price}</div>
-                            <div className="text-xs text-gray-500">per night</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center text-sm text-gray-600 mb-2">
-                          <MapPin className="w-4 h-4 mr-1" />
-                          <span>{hotel.location}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
-                            <span className="text-sm font-medium">{hotel.rating}</span>
-                            <span className="text-sm text-gray-500 ml-2">• {hotel.type}</span>
-                          </div>
-                          <Button size="sm" variant="outline" className="ml-2">
-                            View Details
-                          </Button>
+            {/* Hotel Recommendations Content */}
+            {hotelsLoading ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <Card key={i} className="overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="flex">
+                        <div className="w-32 h-24 bg-gray-200 animate-pulse"></div>
+                        <div className="flex-1 p-4">
+                          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2 animate-pulse"></div>
+                          <div className="h-3 bg-gray-200 rounded w-1/2 mb-2 animate-pulse"></div>
+                          <div className="h-3 bg-gray-200 rounded w-1/4 animate-pulse"></div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : hotelsError ? (
+              <Card className="text-center p-8">
+                <CardContent>
+                  <Heart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2 text-red-600">No Recommendations Available</h3>
+                  <p className="text-gray-600 mb-4">{hotelsError}</p>
+                  <Button onClick={handleRetryRecommendations} variant="outline" className="mr-2">
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Try Again
+                  </Button>
+                  <Button onClick={() => navigate('/chat')}>
+                    Search Hotels
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : hotels.length > 0 ? (
+              <div className="space-y-4">
+                {hotels.map((hotel) => (
+                  <Card key={hotel.id} className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => navigate(`/hotel/${hotel.id}`)}>
+                    <CardContent className="p-0">
+                      <div className="flex">
+                        <div className="w-32 h-24 flex-shrink-0">
+                          <img
+                            src={hotel.image}
+                            alt={hotel.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-semibold text-gray-900">{hotel.name}</h3>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-primary">{hotel.currency}{hotel.price}</div>
+                              <div className="text-xs text-gray-500">per night</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600 mb-2">
+                            <MapPin className="w-4 h-4 mr-1" />
+                            <span>{hotel.location}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
+                              <span className="text-sm font-medium">{hotel.rating}</span>
+                              <span className="text-sm text-gray-500 ml-2">• {hotel.type}</span>
+                            </div>
+                            <Button size="sm" variant="outline" className="ml-2">
+                              View Details
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="text-center p-8">
+                <CardContent>
+                  <Heart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Recommendations Yet</h3>
+                  <p className="text-gray-600 mb-4">
+                    We're working on getting you personalized hotel recommendations.
+                  </p>
+                  <Button onClick={() => navigate('/chat')}>
+                    Search Hotels
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Call to Action */}
             <Card className="mt-6">
