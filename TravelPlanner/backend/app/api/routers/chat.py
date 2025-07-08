@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, File, UploadFile
 from app.schemas.chat import (
     ChatRequest, 
     ChatResponse, 
     ChatHistoryRequest, 
     ChatHistoryResponse, 
-    ClearChatRequest
+    ClearChatRequest,
+    TTSPayload
 )
 from app.services.chat_service import chat_service
 import logging
