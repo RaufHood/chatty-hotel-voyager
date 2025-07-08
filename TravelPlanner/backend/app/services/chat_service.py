@@ -36,7 +36,8 @@ class ChatService:
             config = {
                 "configurable": {
                     "thread_id": session_id
-                }
+                },
+                "recursionLimit": 8  # Limit to 8 steps to prevent infinite loops
             }
             
             # Process with LangGraph agent
@@ -45,6 +46,10 @@ class ChatService:
                 {"messages": [HumanMessage(content=message)]},
                 config=config
             )
+            
+            # Get hotel data from global storage (set by tools)
+            from app.services.lc_tools import get_last_hotel_cards
+            hotel_data = get_last_hotel_cards()
             
             # Extract the final response from the agent
             if result and "messages" in result:
@@ -55,17 +60,21 @@ class ChatService:
                         response_text = final_message.content
                         logger.info(f"Agent response: {response_text[:100]}...")
                         
+                        if hotel_data:
+                            logger.info(f"Found {len(hotel_data)} hotel cards to display")
+                        
                         return {
-                            "response": response_text,
+                            "reply": response_text,
                             "session_id": session_id,
                             "status": "success",
-                            "message_count": len(messages)
+                            "message_count": len(messages),
+                            "hotel_data": hotel_data
                         }
             
             # Fallback if no proper response
             logger.warning(f"No valid response from agent for session {session_id}")
             return {
-                "response": "I apologize, but I couldn't process your request properly. Please try again.",
+                "reply": "I apologize, but I couldn't process your request properly. Please try again.",
                 "session_id": session_id,
                 "status": "error",
                 "error": "No valid agent response"
@@ -74,7 +83,7 @@ class ChatService:
         except Exception as e:
             logger.error(f"Error processing message for session {session_id}: {str(e)}")
             return {
-                "response": "I apologize, but I encountered an error processing your request. Please try again.",
+                "reply": "I apologize, but I encountered an error processing your request. Please try again.",
                 "session_id": session_id,
                 "status": "error",
                 "error": str(e)
@@ -84,6 +93,49 @@ class ChatService:
         """Clear session memory"""
         self.chat_memory.clear_session(session_id)
         logger.info(f"Cleared session: {session_id}")
+    
+    def _extract_hotel_cards(self, response_text: str) -> List[Dict[str, Any]]:
+        """Extract frontend hotel cards from agent response"""
+        import json
+        import re
+        
+        try:
+            # Find JSON objects in the response that contain frontend_hotel_cards
+            json_pattern = r'\{[^{}]*"frontend_hotel_cards"[^{}]*\}'
+            matches = re.findall(json_pattern, response_text, re.DOTALL)
+            
+            for match in matches:
+                try:
+                    # Try to parse as JSON
+                    data = json.loads(match)
+                    if "frontend_hotel_cards" in data:
+                        return data["frontend_hotel_cards"]
+                except json.JSONDecodeError:
+                    continue
+            
+            # Fallback: look for the specific pattern more broadly
+            start_marker = '"frontend_hotel_cards": ['
+            if start_marker in response_text:
+                start_idx = response_text.find(start_marker) + len('"frontend_hotel_cards": ')
+                # Find the matching bracket
+                bracket_count = 0
+                end_idx = start_idx
+                for i, char in enumerate(response_text[start_idx:]):
+                    if char == '[':
+                        bracket_count += 1
+                    elif char == ']':
+                        bracket_count -= 1
+                        if bracket_count == 0:
+                            end_idx = start_idx + i + 1
+                            break
+                
+                hotel_json = response_text[start_idx:end_idx]
+                return json.loads(hotel_json)
+            
+        except Exception as e:
+            logger.error(f"Error extracting hotel cards: {e}")
+        
+        return None
 
 # Global chat service instance
 chat_service = ChatService() 

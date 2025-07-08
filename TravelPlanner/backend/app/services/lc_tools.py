@@ -3,6 +3,9 @@ from typing import Any
 import json
 from app.services import hotel_ops
 
+# Global variable to store last hotel search results for frontend
+_last_hotel_cards = None
+
 def hotel_search_sync(input_str: str) -> str:
     """
     Search hotels by city and dates. 
@@ -43,34 +46,301 @@ hotel_search_tool = Tool(
 
 def select_best_hotel_sync(input_str: str) -> str:
     """
-    Pick best hotel using budget & rating heuristics.
-    Input format: "hotels=[...],budget=60" or just "hotels=[...]"
-    Returns JSON string of selected hotel.
+    Pick top 3 hotels from search results using budget & rating heuristics.
+    Input format: "budget=100,hotels=[hotel_data_json]" or just "budget=100"
+    Returns JSON string of top 3 selected hotels from actual search results.
     """
+    global _last_hotel_cards
     try:
-        # Parse the input - this is simplified for demo
-        if 'budget=' in input_str:
-            budget_str = input_str.split('budget=')[1].split(',')[0]
-            budget = int(budget_str) if budget_str.isdigit() else None
-        else:
-            budget = None
+        # Parse input to extract budget and hotels
+        budget = None
+        hotels_data = []
         
-        # For now, return a simple response
-        return json.dumps({
-            "id": "best_hotel", 
-            "name": "Best Hotel Found", 
-            "price": budget or 100, 
-            "rating": 4.5,
-            "message": f"Selected best hotel within budget: {budget}"
-        })
+        # Try to extract budget
+        if 'budget=' in input_str:
+            try:
+                budget_part = input_str.split('budget=')[1]
+                if ',' in budget_part:
+                    budget_str = budget_part.split(',')[0]
+                else:
+                    budget_str = budget_part
+                budget = int(budget_str) if budget_str.replace('.', '').isdigit() else None
+            except:
+                pass
+        else:
+            # Try to extract any number from the input
+            import re
+            numbers = re.findall(r'\d+', input_str)
+            if numbers:
+                budget = int(numbers[0])
+        
+        # Try to extract hotels data
+        if 'hotels=' in input_str:
+            try:
+                hotels_part = input_str.split('hotels=')[1]
+                hotels_data = json.loads(hotels_part)
+            except:
+                pass
+        
+        # Default budget if none found
+        if not budget:
+            budget = 100
+        
+        # If no hotels data provided, return error message
+        if not hotels_data:
+            return json.dumps({
+                "error": "No hotel search results provided. Please use hotel_search first to get available hotels.",
+                "budget": budget,
+                "message": "Use hotel_search tool first, then pass the results to choose_hotel",
+                "hotel_tool_used": True
+            }, indent=2)
+        
+        # Filter hotels within budget
+        affordable_hotels = []
+        for hotel in hotels_data:
+            hotel_price = hotel.get('price', 0)
+            if hotel_price <= budget:
+                affordable_hotels.append(hotel)
+        
+        # If no hotels within budget, inform the user
+        if not affordable_hotels:
+            cheapest_hotels = sorted(hotels_data, key=lambda x: x.get('price', 0))[:3]
+            
+            # Transform to frontend format for cheapest alternatives
+            frontend_cheapest = []
+            for hotel in cheapest_hotels:
+                frontend_cheapest.append({
+                    "id": str(hotel.get('id', 'unknown')),
+                    "name": hotel.get('name', 'Unknown Hotel'),
+                    "location": hotel.get('location', 'Unknown'),
+                    "price": hotel.get('price', 0),
+                    "rating": hotel.get('rating', 0),
+                    "image": _get_hotel_image(hotel.get('category', '')),
+                    "type": _transform_category_to_type(hotel.get('category', 'Standard'))
+                })
+            
+            # Store globally for chat service
+            _last_hotel_cards = frontend_cheapest
+            
+            return json.dumps({
+                "error": f"No hotels found within your {budget}€ budget",
+                "budget": budget,
+                "total_found": len(hotels_data),
+                "within_budget": 0,
+                "cheapest_alternatives": cheapest_hotels,
+                "message": f"No hotels available within {budget}€ budget. Cheapest available options start from {cheapest_hotels[0].get('price', 0)}€",
+                "frontend_hotel_cards": frontend_cheapest,
+                "hotel_tool_used": True
+            }, indent=2)
+        
+        # Sort by rating (descending) and price (ascending)
+        affordable_hotels.sort(key=lambda x: (-x.get('rating', 0), x.get('price', 0)))
+        
+        # Select top 3
+        selected_hotels = affordable_hotels[:3]
+        
+        # Transform to frontend format
+        frontend_hotel_cards = []
+        for hotel in selected_hotels:
+            frontend_hotel_cards.append({
+                "id": str(hotel.get('id', 'unknown')),
+                "name": hotel.get('name', 'Unknown Hotel'),
+                "location": hotel.get('location', 'Unknown'),
+                "price": hotel.get('price', 0),
+                "rating": hotel.get('rating', 0),
+                "image": _get_hotel_image(hotel.get('category', '')),
+                "type": _transform_category_to_type(hotel.get('category', 'Standard')),
+                "amenities": hotel.get('amenities', ['Wi-Fi', 'Air Conditioning', 'Room Service'])
+            })
+        
+        # Store globally for chat service
+        _last_hotel_cards = frontend_hotel_cards
+        
+        response = {
+            "top_hotels": selected_hotels,
+            "budget": budget,
+            "total_found": len(hotels_data),
+            "within_budget": len([h for h in hotels_data if h.get('price', 0) <= budget]),
+            "message": f"Selected {len(selected_hotels)} hotels from {len(hotels_data)} available options with budget {budget}€",
+            "frontend_hotel_cards": frontend_hotel_cards,
+            "hotel_tool_used": True
+        }
+        
+        return json.dumps(response, indent=2)
+        
     except Exception as e:
-        return f"Error selecting hotel: {e}"
+        return f"Error selecting hotels: {str(e)}"
 
 hotel_select_tool = Tool(
     name="choose_hotel",
-    description="Choose the best hotel from search results. Input format: hotels=[hotel_list],budget=60",
+    description="Choose the top 3 hotels from search results based on budget. Input format: budget=100,hotels=[hotel_search_results]. Pass the actual hotel search results from hotel_search tool.",
     func=select_best_hotel_sync,
 )
 
-# Export tools list for LangGraph agent
-TOOLS = [hotel_search_tool, hotel_select_tool]
+def search_and_select_hotels_sync(input_str: str) -> str:
+    """
+    Search for hotels and select the top 3 based on budget in one step.
+    Input format: "city=Barcelona,check_in=2025-07-08,check_out=2025-07-09,budget=100"
+    Returns JSON string of top 3 selected hotels from actual search results.
+    """
+    global _last_hotel_cards
+    import asyncio
+    try:
+        # Parse the input string
+        params = {}
+        for param in input_str.split(','):
+            if '=' in param:
+                key, value = param.split('=', 1)
+                params[key.strip()] = value.strip()
+        
+        city = params.get('city', '')
+        check_in = params.get('check_in', '')
+        check_out = params.get('check_out', '')
+        budget = int(params.get('budget', 100))
+        
+        if not all([city, check_in, check_out]):
+            return "Error: Missing required parameters. Use format: city=Barcelona,check_in=2025-07-08,check_out=2025-07-09,budget=100"
+        
+        # Search for hotels
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        hotels_data = loop.run_until_complete(hotel_ops.search_hotels(city, check_in, check_out))
+        loop.close()
+        
+        if not hotels_data:
+            _last_hotel_cards = []
+            return json.dumps({
+                "error": f"No hotels found for {city}",
+                "budget": budget,
+                "message": f"No hotels available for {city} on {check_in} to {check_out}",
+                "frontend_hotel_cards": [],
+                "hotel_tool_used": True
+            }, indent=2)
+        
+        # Filter hotels within budget
+        affordable_hotels = []
+        for hotel in hotels_data:
+            hotel_price = hotel.get('price', 0)
+            if hotel_price <= budget:
+                affordable_hotels.append(hotel)
+        
+        # If no hotels within budget, inform the user
+        if not affordable_hotels:
+            cheapest_hotels = sorted(hotels_data, key=lambda x: x.get('price', 0))[:3]
+            
+            # Transform to frontend format for cheapest alternatives
+            frontend_cheapest = []
+            for hotel in cheapest_hotels:
+                frontend_cheapest.append({
+                    "id": str(hotel.get('id', 'unknown')),
+                    "name": hotel.get('name', 'Unknown Hotel'),
+                    "location": hotel.get('location', city),
+                    "price": hotel.get('price', 0),
+                    "rating": hotel.get('rating', 0),
+                    "image": _get_hotel_image(hotel.get('category', '')),
+                    "type": _transform_category_to_type(hotel.get('category', 'Standard')),
+                    "amenities": hotel.get('amenities', ['Wi-Fi', 'Air Conditioning', 'Room Service'])
+                })
+            
+            # Store globally for chat service
+            _last_hotel_cards = frontend_cheapest
+            
+            return json.dumps({
+                "error": f"No hotels found within your {budget}€ budget",
+                "budget": budget,
+                "total_found": len(hotels_data),
+                "within_budget": 0,
+                "cheapest_alternatives": cheapest_hotels,
+                "message": f"No hotels available within {budget}€ budget. Cheapest available options start from {cheapest_hotels[0].get('price', 0)}€",
+                "frontend_hotel_cards": frontend_cheapest,
+                "hotel_tool_used": True
+            }, indent=2)
+        
+        # Sort by rating (descending) and price (ascending)
+        affordable_hotels.sort(key=lambda x: (-x.get('rating', 0), x.get('price', 0)))
+        
+        # Select top 3
+        selected_hotels = affordable_hotels[:3]
+        
+        # Transform to frontend format
+        frontend_hotel_cards = []
+        for hotel in selected_hotels:
+            frontend_hotel_cards.append({
+                "id": str(hotel.get('id', 'unknown')),
+                "name": hotel.get('name', 'Unknown Hotel'),
+                "location": hotel.get('location', city),
+                "price": hotel.get('price', 0),
+                "rating": hotel.get('rating', 0),
+                "image": _get_hotel_image(hotel.get('category', '')),
+                "type": _transform_category_to_type(hotel.get('category', 'Standard')),
+                "amenities": hotel.get('amenities', ['Wi-Fi', 'Air Conditioning', 'Room Service'])
+            })
+        
+        # Store globally for chat service
+        _last_hotel_cards = frontend_hotel_cards
+        
+        response = {
+            "top_hotels": selected_hotels,
+            "city": city,
+            "dates": f"{check_in} to {check_out}",
+            "budget": budget,
+            "total_found": len(hotels_data),
+            "within_budget": len([h for h in hotels_data if h.get('price', 0) <= budget]),
+            "message": f"Found {len(selected_hotels)} hotels in {city} within your {budget}€ budget",
+            "frontend_hotel_cards": frontend_hotel_cards,
+            "hotel_tool_used": True
+        }
+        
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        return f"Error in hotel search and selection: {str(e)}"
+
+def get_last_hotel_cards():
+    """Get and clear the last hotel cards from tool execution"""
+    global _last_hotel_cards
+    cards = _last_hotel_cards
+    _last_hotel_cards = None  # Clear after retrieval
+    return cards
+
+def _transform_category_to_type(category: str) -> str:
+    """Transform hotel category to user-friendly type"""
+    if "5 STARS" in category:
+        return "5 Star Hotel"
+    elif "4 STARS" in category:
+        return "4 Star Hotel"
+    elif "3 STARS" in category:
+        return "3 Star Hotel"
+    elif "2 STARS" in category:
+        return "2 Star Hotel"
+    elif "1 STARS" in category:
+        return "1 Star Hotel"
+    elif "APARTMENT" in category:
+        return "Apartment"
+    elif "HOSTAL" in category:
+        return "Hostal"
+    else:
+        return "Hotel"
+
+def _get_hotel_image(category: str) -> str:
+    """Get hotel image based on category"""
+    if "5 STARS" in category:
+        return "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=300&fit=crop"
+    elif "4 STARS" in category:
+        return "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop"
+    elif "3 STARS" in category:
+        return "https://images.unsplash.com/photo-1521783988139-89397d761dce?w=400&h=300&fit=crop"
+    elif "APARTMENT" in category:
+        return "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=300&fit=crop"
+    else:
+        return "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&h=300&fit=crop"
+
+# Combined tool that does both search and selection
+hotel_search_select_tool = Tool(
+    name="search_and_select_hotels",
+    description="Search hotels and select top 3 based on budget in one step. Input format: city=Barcelona,check_in=2025-07-08,check_out=2025-07-09,budget=100",
+    func=search_and_select_hotels_sync,
+)
+
+# Export tools list for LangGraph agent - only include the working single-step tool
+TOOLS = [hotel_search_select_tool]
