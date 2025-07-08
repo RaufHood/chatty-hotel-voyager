@@ -1,6 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException
 from app.schemas.chat import (
     ChatRequest, 
     ChatResponse, 
@@ -9,17 +7,10 @@ from app.schemas.chat import (
     ClearChatRequest
 )
 from app.services.chat_service import chat_service
-from app.services.auth_deps import get_current_user
-from app.schemas.auth import User
-from app.services.llm_tts_stt import stt, tts
 import logging
-from io import BytesIO
-
-class TTSPayload(BaseModel):
-    text: str
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["chat"])
+router = APIRouter(prefix="/chat", tags=["chat"])
 
 @router.post("/", response_model=ChatResponse)
 async def chat(request: ChatRequest):
@@ -80,25 +71,3 @@ async def chat_health():
     Health check endpoint for the chat service.
     """
     return {"status": "healthy", "service": "chat"}
-    
-
-@router.post("/tts")
-async def text_to_speech(payload: TTSPayload):
-    try:
-        text = payload.dict()['text']
-        output = tts(text)
-        buffer = BytesIO(output)
-        return StreamingResponse(buffer, media_type="application/octet-stream")
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=400, detail=str(e))
-        
-@router.post("/stt")
-async def speect_to_text(payload: UploadFile = File(...)):
-    try:
-        audio = await payload.read()
-        output = stt(audio)
-        return {"voice": output}
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=400, detail=str(e))

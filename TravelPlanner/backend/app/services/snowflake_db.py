@@ -7,25 +7,10 @@ import pandas as pd
 class SnowflakeDB:
     def __init__(self):
         self.connection = None
-        # Don't connect automatically - only when needed
+        self._connect()
     
     def _connect(self):
         """Establish connection to Snowflake"""
-        if self.connection is not None:
-            return
-            
-        # Check if we have the required credentials
-        if not all([
-            settings.snowflake_account,
-            settings.snowflake_user,
-            settings.snowflake_password,
-            settings.snowflake_warehouse,
-            settings.snowflake_database,
-            settings.snowflake_schema
-        ]):
-            print("Snowflake credentials not configured. Skipping connection.")
-            return
-            
         try:
             self.connection = snowflake.connector.connect(
                 account=settings.snowflake_account,
@@ -36,24 +21,12 @@ class SnowflakeDB:
                 schema=settings.snowflake_schema,
                 role=settings.snowflake_role
             )
-            print("Successfully connected to Snowflake")
         except Exception as e:
             print(f"Failed to connect to Snowflake: {e}")
-            # Don't raise the exception - just log it
-            self.connection = None
-    
-    def _ensure_connection(self):
-        """Ensure we have a connection before executing queries"""
-        if self.connection is None:
-            self._connect()
-        return self.connection is not None
+            raise
     
     def execute_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Execute a query and return results as list of dictionaries"""
-        if not self._ensure_connection():
-            print("No Snowflake connection available")
-            return []
-            
         try:
             cursor = self.connection.cursor()
             if params:
@@ -71,17 +44,13 @@ class SnowflakeDB:
             return [dict(zip(columns, row)) for row in results]
         except Exception as e:
             print(f"Error executing query: {e}")
-            return []
+            raise
         finally:
             if cursor:
                 cursor.close()
     
     def execute_insert(self, query: str, params: Optional[Dict[str, Any]] = None) -> int:
         """Execute an INSERT query and return the number of affected rows"""
-        if not self._ensure_connection():
-            print("No Snowflake connection available")
-            return 0
-            
         try:
             cursor = self.connection.cursor()
             if params:
@@ -93,9 +62,8 @@ class SnowflakeDB:
             return cursor.rowcount
         except Exception as e:
             print(f"Error executing insert: {e}")
-            if self.connection:
-                self.connection.rollback()
-            return 0
+            self.connection.rollback()
+            raise
         finally:
             if cursor:
                 cursor.close()
@@ -110,10 +78,6 @@ class SnowflakeDB:
     
     def insert_dataframe(self, df: pd.DataFrame, table_name: str) -> bool:
         """Insert a pandas DataFrame into a Snowflake table"""
-        if not self._ensure_connection():
-            print("No Snowflake connection available")
-            return False
-            
         try:
             success, nchunks, nrows, _ = write_pandas(
                 self.connection, 
@@ -124,7 +88,7 @@ class SnowflakeDB:
             return success
         except Exception as e:
             print(f"Error inserting DataFrame: {e}")
-            return False
+            raise
     
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user by email"""
@@ -175,11 +139,149 @@ class SnowflakeDB:
         affected_rows = self.execute_update(query, params)
         return affected_rows > 0
     
+    # Trip-related functions
+    def list_trips(self, user_id: int) -> List[Dict[str, Any]]:
+        """List all trips for a specific user"""
+        query = f"""
+        SELECT 
+            TRIP_ID,
+            USER_ID,
+            DATE_START,
+            DATE_END
+        FROM {settings.snowflake_trips_table} 
+        WHERE USER_ID = %s
+        ORDER BY DATE_START DESC
+        """
+        return self.execute_query(query, {"user_id": user_id})
+    
+    def get_trip_by_id(self, trip_id: int) -> Optional[Dict[str, Any]]:
+        """Get a specific trip by trip_id"""
+        query = f"""
+        SELECT 
+            TRIP_ID,
+            USER_ID,
+            DATE_START,
+            DATE_END
+        FROM {settings.snowflake_trips_table} 
+        WHERE TRIP_ID = %s
+        """
+        results = self.execute_query(query, {"trip_id": trip_id})
+        return results[0] if results else None
+    
+    def get_trip_legs(self, trip_id: int) -> List[Dict[str, Any]]:
+        """Get all trip legs for a specific trip"""
+        query = f"""
+        SELECT 
+            TL.TRIP_LEG_ID,
+            TL.TRIP_ID,
+            TL.USER_ID,
+            TL.HOTEL_ID,
+            TL.ARRIVAL_DATE,
+            TL.DEPARTURE_DATE,
+            TL.STAY_PRICE,
+            H.HOTEL_NAME,
+            H.STARS,
+            H.RATING,
+            H.LATITUDE,
+            H.LONGITUDE,
+            H.COUNTRY_CODE,
+            H.CITY_CODE,
+            H.HOTEL_TYPE
+        FROM {settings.snowflake_trip_legs_table} TL
+        LEFT JOIN {settings.snowflake_hotels_table} H ON TL.HOTEL_ID = H.HOTEL_ID
+        WHERE TL.TRIP_ID = %s
+        ORDER BY TL.ARRIVAL_DATE
+        """
+        return self.execute_query(query, {"trip_id": trip_id})
+    
+    def get_hotels_in_trip(self, trip_id: int) -> List[Dict[str, Any]]:
+        """Get all hotels booked in a specific trip"""
+        query = f"""
+        SELECT DISTINCT
+            H.HOTEL_ID,
+            H.HOTEL_NAME,
+            H.STARS,
+            H.RATING,
+            H.LATITUDE,
+            H.LONGITUDE,
+            H.COUNTRY_CODE,
+            H.CITY_CODE,
+            H.HOTEL_TYPE,
+            TL.ARRIVAL_DATE,
+            TL.DEPARTURE_DATE,
+            TL.STAY_PRICE
+        FROM {settings.snowflake_trip_legs_table} TL
+        INNER JOIN {settings.snowflake_hotels_table} H ON TL.HOTEL_ID = H.HOTEL_ID
+        WHERE TL.TRIP_ID = %s
+        ORDER BY TL.ARRIVAL_DATE
+        """
+        return self.execute_query(query, {"trip_id": trip_id})
+    
+    def create_trip(self, user_id: int, date_start: str, date_end: str) -> int:
+        """Create a new trip and return the trip_id"""
+        query = f"""
+        INSERT INTO {settings.snowflake_trips_table} (USER_ID, DATE_START, DATE_END)
+        VALUES (%s, %s, %s)
+        """
+        self.execute_insert(query, {
+            "user_id": user_id,
+            "date_start": date_start,
+            "date_end": date_end
+        })
+        
+        # Get the created trip_id by finding the most recent trip for this user
+        query_get_id = f"""
+        SELECT TRIP_ID 
+        FROM {settings.snowflake_trips_table} 
+        WHERE USER_ID = %s 
+        ORDER BY TRIP_ID DESC 
+        LIMIT 1
+        """
+        results = self.execute_query(query_get_id, {"user_id": user_id})
+        return results[0]["TRIP_ID"] if results else None
+    
+    def add_trip_leg(self, trip_id: int, user_id: int, hotel_id: int, 
+                     arrival_date: str, departure_date: str, stay_price: float) -> int:
+        """Add a trip leg to a trip and return the trip_leg_id"""
+        query = f"""
+        INSERT INTO {settings.snowflake_trip_legs_table} 
+        (TRIP_ID, USER_ID, HOTEL_ID, ARRIVAL_DATE, DEPARTURE_DATE, STAY_PRICE)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        self.execute_insert(query, {
+            "trip_id": trip_id,
+            "user_id": user_id,
+            "hotel_id": hotel_id,
+            "arrival_date": arrival_date,
+            "departure_date": departure_date,
+            "stay_price": stay_price
+        })
+        
+        # Get the created trip_leg_id
+        query_get_id = f"""
+        SELECT TRIP_LEG_ID 
+        FROM {settings.snowflake_trip_legs_table} 
+        WHERE TRIP_ID = %s AND HOTEL_ID = %s AND ARRIVAL_DATE = %s
+        ORDER BY TRIP_LEG_ID DESC 
+        LIMIT 1
+        """
+        results = self.execute_query(query_get_id, {
+            "trip_id": trip_id,
+            "hotel_id": hotel_id,
+            "arrival_date": arrival_date
+        })
+        return results[0]["TRIP_LEG_ID"] if results else None
+    
+    def get_hotel_by_id(self, hotel_id: int) -> Optional[Dict[str, Any]]:
+        """Get a single hotel by hotel_id"""
+        query = f"SELECT * FROM {settings.snowflake_hotels_table} WHERE HOTEL_ID = %s"
+        results = self.execute_query(query, {"hotel_id": hotel_id})
+        return results[0] if results else None
+    
     def close(self):
         """Close the database connection"""
         if self.connection:
             self.connection.close()
-            self.connection = None
 
-# Global instance - don't connect automatically
+# Global instance
 snowflake_db = SnowflakeDB() 
