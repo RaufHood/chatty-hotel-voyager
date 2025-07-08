@@ -165,7 +165,7 @@ def select_best_hotel_sync(input_str: str) -> str:
             "budget": budget,
             "total_found": len(hotels_data),
             "within_budget": len([h for h in hotels_data if h.get('price', 0) <= budget]),
-            "message": f"Selected {len(selected_hotels)} hotels from {len(hotels_data)} available options with budget {budget}€",
+            "message": f"Found {len(selected_hotels)} hotels within your {budget}€ budget",
             "frontend_hotel_cards": frontend_hotel_cards,
             "hotel_tool_used": True
         }
@@ -181,29 +181,33 @@ hotel_select_tool = Tool(
     func=select_best_hotel_sync,
 )
 
-def search_and_select_hotels_sync(input_str: str) -> str:
+from langchain_core.tools import tool
+from typing import Any
+import json
+from app.services import hotel_ops
+
+# Global variable to store last hotel search results for frontend
+_last_hotel_cards = None
+
+@tool
+def search_and_select_hotels(city: str, check_in: str, check_out: str, budget: int) -> str:
     """
     Search for hotels and select the top 3 based on budget in one step.
-    Input format: "city=Barcelona,check_in=2025-07-08,check_out=2025-07-09,budget=100"
-    Returns JSON string of top 3 selected hotels from actual search results.
+    
+    Args:
+        city: City name (e.g., "Barcelona")
+        check_in: Check-in date in YYYY-MM-DD format (e.g., "2025-07-29")
+        check_out: Check-out date in YYYY-MM-DD format (e.g., "2025-07-30")
+        budget: Maximum budget per night in euros (e.g., 140)
+    
+    Returns:
+        JSON string of top 3 selected hotels from actual search results
     """
     global _last_hotel_cards
     import asyncio
     try:
-        # Parse the input string
-        params = {}
-        for param in input_str.split(','):
-            if '=' in param:
-                key, value = param.split('=', 1)
-                params[key.strip()] = value.strip()
-        
-        city = params.get('city', '')
-        check_in = params.get('check_in', '')
-        check_out = params.get('check_out', '')
-        budget = int(params.get('budget', 0))  # No default budget - must be specified
-        
         if not all([city, check_in, check_out, budget > 0]):
-            return "Error: Missing required parameters. Use format: city=Barcelona,check_in=2025-07-08,check_out=2025-07-09,budget=100"
+            return "Error: Missing required parameters. Please provide city, check_in, check_out, and budget."
         
         # Search for hotels
         loop = asyncio.new_event_loop()
@@ -277,7 +281,7 @@ def search_and_select_hotels_sync(input_str: str) -> str:
                 "rating": hotel.get('rating', 0),
                 "image": _get_hotel_image(hotel.get('category', '')),
                 "type": _transform_category_to_type(hotel.get('category', 'Standard')),
-                                    "amenities": hotel.get('amenities', [])
+                "amenities": hotel.get('amenities', [])
             })
         
         # Store globally for chat service
@@ -300,12 +304,14 @@ def search_and_select_hotels_sync(input_str: str) -> str:
     except Exception as e:
         return f"Error in hotel search and selection: {str(e)}"
 
-def get_last_hotel_cards():
-    """Get and clear the last hotel cards from tool execution"""
+def clear_last_hotel_cards():
+    """Clear the global hotel cards storage"""
     global _last_hotel_cards
-    cards = _last_hotel_cards
-    _last_hotel_cards = None  # Clear after retrieval
-    return cards
+    _last_hotel_cards = None
+
+def get_last_hotel_cards():
+    """Get the last hotel cards for frontend display"""
+    return _last_hotel_cards
 
 def get_hotel_details_sync(hotel_id: str) -> dict:
     """Get detailed hotel information by ID - enhanced mock data based on hotel ID"""
@@ -414,13 +420,6 @@ def _get_hotel_image(category: str) -> str:
     else:
         return "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400&h=300&fit=crop"
 
-# Combined tool that does both search and selection
-hotel_search_select_tool = Tool(
-    name="search_and_select_hotels",
-    description="Search hotels and select top 3 based on budget in one step. Input format: city=Barcelona,check_in=2025-07-08,check_out=2025-07-09,budget=100",
-    func=search_and_select_hotels_sync,
-)
-
 # Hotel details tool
 hotel_details_tool = Tool(
     name="get_hotel_details",
@@ -428,5 +427,5 @@ hotel_details_tool = Tool(
     func=get_hotel_details_sync,
 )
 
-# Export tools list for LangGraph agent - only include the working single-step tool
-TOOLS = [hotel_search_select_tool, hotel_details_tool]
+# Export tools list for LangGraph agent - use the new @tool decorated function
+TOOLS = [search_and_select_hotels, hotel_details_tool]

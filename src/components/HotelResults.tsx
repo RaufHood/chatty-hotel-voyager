@@ -1,10 +1,9 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Star, Wifi, Car, Coffee, Heart } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 interface Hotel {
   id: string;
@@ -36,6 +35,7 @@ export const HotelResults: React.FC<HotelResultsProps> = ({
   guests = 2
 }) => {
   const navigate = useNavigate();
+  const { sessionId } = useParams();
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   // Mock data for Paris hotels
@@ -115,6 +115,26 @@ export const HotelResults: React.FC<HotelResultsProps> = ({
     return <Star className="w-3 h-3" />;
   };
 
+  const handleViewDetails = (hotelId: string) => {
+    // Store the current chat session ID so we can return to it
+    const currentSessionId = sessionId || localStorage.getItem('currentChatSession');
+    if (currentSessionId) {
+      localStorage.setItem('returnToChatSession', currentSessionId);
+    }
+    
+    navigate(`/hotel/${hotelId}`);
+  };
+
+  const handleViewAllResults = () => {
+    // Return to the current chat session if available
+    const currentSessionId = sessionId || localStorage.getItem('currentChatSession');
+    if (currentSessionId) {
+      navigate(`/chat/${currentSessionId}`);
+    } else {
+      navigate('/chat');
+    }
+  };
+
   return (
     <div className="w-full max-w-2xl">
       <div className="mb-4">
@@ -186,7 +206,7 @@ export const HotelResults: React.FC<HotelResultsProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/hotel/${hotel.id}`)}
+                      onClick={() => handleViewDetails(hotel.id)}
                     >
                       View Details
                     </Button>
@@ -213,7 +233,7 @@ export const HotelResults: React.FC<HotelResultsProps> = ({
       </div>
       
       <div className="mt-4 text-center">
-        <Button variant="outline" onClick={() => navigate('/chat')}>
+        <Button variant="outline" onClick={handleViewAllResults}>
           View All Results
         </Button>
       </div>

@@ -29,6 +29,10 @@ class ChatService:
         try:
             logger.info(f"Processing message for session {session_id}: {message[:100]}...")
             
+            # Clear any previous hotel cards to prevent showing old data
+            from app.services.lc_tools import clear_last_hotel_cards
+            clear_last_hotel_cards()
+            
             # Get or create agent for this session
             agent = self.chat_memory.get_or_create_agent(session_id)
             
@@ -42,6 +46,21 @@ class ChatService:
             
             # Process with LangGraph agent
             logger.info(f"Invoking LangGraph agent for session {session_id}")
+            
+            # Debug: Check if agent has conversation history
+            try:
+                # Get current state to see conversation history
+                current_state = agent.get_state(config)
+                logger.info(f"Current conversation history for session {session_id}: {len(current_state.values.get('messages', []))} messages")
+                if current_state.values.get('messages'):
+                    last_messages = current_state.values['messages'][-3:]  # Last 3 messages
+                    for i, msg in enumerate(last_messages):
+                        msg_type = getattr(msg, '__class__', {}).get('__name__', 'Unknown')
+                        content_preview = getattr(msg, 'content', '')[:50] if hasattr(msg, 'content') else 'No content'
+                        logger.info(f"  Message {i}: {msg_type} - {content_preview}...")
+            except Exception as e:
+                logger.info(f"Could not retrieve conversation history: {e}")
+            
             result = await agent.ainvoke(
                 {"messages": [HumanMessage(content=message)]},
                 config=config

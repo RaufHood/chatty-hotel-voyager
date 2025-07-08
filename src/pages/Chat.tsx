@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, ArrowLeft, Menu, Mic, MicOff } from "lucide-react";
+import { Send, ArrowLeft, Menu, Mic, MicOff, Plus } from "lucide-react";
 import { ChatMessage } from "@/components/ChatMessage";
 import { HotelResults } from "@/components/HotelResults";
 import { ChatSidebar } from "@/components/ChatSidebar";
@@ -20,6 +20,87 @@ interface Message {
   isVoiceMessage?: boolean;
 }
 
+interface ChatSession {
+  id: string;
+  title: string;
+  messages: Message[];
+  lastMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Chat persistence utilities
+const CHAT_SESSIONS_KEY = 'chatSessions';
+const CURRENT_SESSION_KEY = 'currentChatSession';
+
+const saveChatSession = (session: ChatSession) => {
+  try {
+    const sessions = getChatSessions();
+    const existingIndex = sessions.findIndex(s => s.id === session.id);
+    
+    if (existingIndex >= 0) {
+      sessions[existingIndex] = session;
+    } else {
+      sessions.unshift(session); // Add new sessions at the beginning
+    }
+    
+    // Keep only last 50 sessions
+    if (sessions.length > 50) {
+      sessions.splice(50);
+    }
+    
+    localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(sessions));
+    localStorage.setItem(CURRENT_SESSION_KEY, session.id);
+  } catch (error) {
+    console.error('Error saving chat session:', error);
+  }
+};
+
+const getChatSessions = (): ChatSession[] => {
+  try {
+    const sessions = localStorage.getItem(CHAT_SESSIONS_KEY);
+    return sessions ? JSON.parse(sessions) : [];
+  } catch (error) {
+    console.error('Error loading chat sessions:', error);
+    return [];
+  }
+};
+
+const getChatSession = (sessionId: string): ChatSession | null => {
+  try {
+    const sessions = getChatSessions();
+    return sessions.find(s => s.id === sessionId) || null;
+  } catch (error) {
+    console.error('Error loading chat session:', error);
+    return null;
+  }
+};
+
+const getCurrentSessionId = (): string | null => {
+  try {
+    return localStorage.getItem(CURRENT_SESSION_KEY);
+  } catch (error) {
+    return null;
+  }
+};
+
+const generateSessionTitle = (firstMessage: string): string => {
+  // Extract key words from the first message to create a title
+  const cleanMessage = firstMessage.toLowerCase().replace(/[^\w\s]/g, '');
+  const words = cleanMessage.split(' ').filter(word => word.length > 2);
+  
+  if (words.length === 0) return 'New Chat';
+  
+  // Look for location names or travel-related keywords
+  const importantWords = words.filter(word => 
+    ['hotel', 'hotels', 'trip', 'travel', 'vacation', 'book', 'booking', 'find', 'search'].includes(word) ||
+    word.length > 4
+  );
+  
+  const title = importantWords.slice(0, 3).join(' ');
+  return title.charAt(0).toUpperCase() + title.slice(1) || 'New Chat';
+};
+
 const Chat = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -30,8 +111,19 @@ const Chat = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Generate a session ID if not provided (use state to keep it consistent)
-  const [currentSessionId] = useState(() => sessionId || `session_${Date.now()}`);
+  // Generate a session ID if not provided
+  const [currentSessionId] = useState(() => {
+    if (sessionId) return sessionId;
+    
+    // If there's an initial message, always create a new session
+    if (location.state?.initialMessage) {
+      return `session_${Date.now()}`;
+    }
+    
+    // For new chat (no sessionId and no initial message), always create new session
+    // Don't try to load existing session from localStorage for new chats
+    return `session_${Date.now()}`;
+  });
   
   const { 
     isRecording, 
@@ -48,34 +140,93 @@ const Chat = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Load chat session on component mount
   useEffect(() => {
-    const initialMessage = location.state?.initialMessage;
-    if (initialMessage && !sessionId) {
-      // New chat with initial message
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        content: initialMessage,
-        role: "user",
-        timestamp: new Date(),
+    const loadChatSession = () => {
+      const initialMessage = location.state?.initialMessage;
+      
+      if (initialMessage && !sessionId) {
+        // New chat with initial message
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          content: initialMessage,
+          role: "user",
+          timestamp: new Date(),
+        };
+        
+        setMessages([userMessage]);
+        setIsLoading(true);
+        
+        // Send the initial message to the backend
+        sendMessageToBackend(initialMessage);
+      } else if (sessionId) {
+        // Load existing session
+        const session = getChatSession(sessionId);
+        if (session) {
+          // Convert timestamp strings back to Date objects
+          const messagesWithDates = session.messages.map(msg => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }));
+          setMessages(messagesWithDates);
+        } else {
+          // Session not found, show welcome message
+          setMessages([
+            {
+              id: "1",
+              content: "Hi! I'm your travel assistant. Tell me about your ideal trip - where would you like to go and when?",
+              role: "assistant",
+              timestamp: new Date(),
+            }
+          ]);
+        }
+      } else {
+        // New chat without sessionId - always start fresh
+        // Clear any existing current session since this is a new chat
+        localStorage.removeItem(CURRENT_SESSION_KEY);
+        
+        // Show welcome message for new chats
+        setMessages([
+          {
+            id: "1",
+            content: "Hi! I'm your travel assistant. Tell me about your ideal trip - where would you like to go and when?",
+            role: "assistant",
+            timestamp: new Date(),
+          }
+        ]);
+      }
+    };
+
+    loadChatSession();
+  }, [location.state, sessionId]);
+
+  // Save chat session whenever messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      // Don't save if it's just the welcome message
+      if (messages.length === 1 && messages[0].role === "assistant" && messages[0].id === "1") {
+        return;
+      }
+      
+      // Generate title from first user message
+      const firstUserMessage = messages.find(m => m.role === "user");
+      const title = firstUserMessage ? generateSessionTitle(firstUserMessage.content) : 'New Chat';
+      
+      const session: ChatSession = {
+        id: currentSessionId,
+        title,
+        messages: messages.map(msg => ({
+          ...msg,
+          timestamp: msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp)
+        })),
+        lastMessage: messages[messages.length - 1]?.content,
+        createdAt: messages[0]?.timestamp instanceof Date ? messages[0].timestamp.toISOString() : new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
       
-      setMessages([userMessage]);
-      setIsLoading(true);
-      
-      // Send the initial message to the backend
-      sendMessageToBackend(initialMessage);
-    } else if (!sessionId) {
-      // Default welcome message for new chats
-      setMessages([
-        {
-          id: "1",
-          content: "Hi! I'm your travel assistant. Tell me about your ideal trip - where would you like to go and when?",
-          role: "assistant",
-          timestamp: new Date(),
-        }
-      ]);
+      saveChatSession(session);
     }
-  }, [location.state, sessionId]);
+  }, [messages, currentSessionId]);
 
   const sendMessageToBackend = async (message: string, autoPlayTTS: boolean = false) => {
     try {
@@ -217,12 +368,25 @@ const Chat = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">T</span>
             </div>
             <h1 className="font-semibold text-lg text-primary">Travelry</h1>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              // Clear the current session to ensure a new chat is created
+              localStorage.removeItem(CURRENT_SESSION_KEY);
+              navigate("/chat");
+            }}
+            className="text-xs"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            New Chat
+          </Button>
         </div>
 
         {/* Messages */}
@@ -355,3 +519,6 @@ const Chat = () => {
 };
 
 export default Chat;
+
+// Export the utility functions for use in other components
+export { getChatSessions, getChatSession, saveChatSession };

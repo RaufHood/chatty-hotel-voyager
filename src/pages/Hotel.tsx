@@ -112,6 +112,19 @@ const Hotel = () => {
     navigate(`/pay/${hotel.id}`);
   };
 
+  const handleBackNavigation = () => {
+    // Check if there's a stored chat session to return to
+    const returnToChatSession = localStorage.getItem('returnToChatSession');
+    if (returnToChatSession) {
+      // Clear the stored session and navigate back to it
+      localStorage.removeItem('returnToChatSession');
+      navigate(`/chat/${returnToChatSession}`);
+    } else {
+      // Default back navigation
+      navigate(-1);
+    }
+  };
+
   // Helper to get full image URL
   const getImageUrl = (img: string) => {
     if (!img) return "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop";
@@ -127,7 +140,7 @@ const Hotel = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate(-1)}
+            onClick={handleBackNavigation}
             className="mr-3"
           >
             <ArrowLeft className="w-5 h-5" />
